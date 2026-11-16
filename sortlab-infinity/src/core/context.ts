@@ -24,6 +24,11 @@ export interface ContextOptions {
   seed?: number;
   /** Polled periodically; return true to abort with CancelledError. */
   shouldAbort?: () => boolean;
+  /**
+   * Compare only v >> keyShift (testing aid): lets a value carry its original index in the
+   * low bits so stability can be verified. 0 = compare full values.
+   */
+  keyShift?: number;
 }
 
 /** Auxiliary scratch array whose writes are counted (but not visualized). */
@@ -61,6 +66,7 @@ export class SortContext {
   private readonly shouldAbort?: () => boolean;
   private ops = 0;
   private nextAbortCheck = 1 << 14;
+  private readonly shift: number;
 
   constructor(values: ArrayLike<number>, opts: ContextOptions = {}) {
     this.n = values.length;
@@ -69,6 +75,7 @@ export class SortContext {
     this.opLimit = opts.opLimit ?? Number.POSITIVE_INFINITY;
     this.shouldAbort = opts.shouldAbort;
     this.random = mulberry32(opts.seed ?? 12345);
+    this.shift = opts.keyShift ?? 0;
     this.trace = new Int32Array(this.recording ? 3 * 4096 : 0);
   }
 
@@ -131,7 +138,8 @@ export class SortContext {
     this.tick();
     this.stats.comparisons++;
     this.push(OP_COMPARE, i, j);
-    return this.a[i] - this.a[j];
+    const s = this.shift;
+    return (this.a[i] >> s) - (this.a[j] >> s);
   }
 
   /** Compare two values (e.g. a pivot held in a temporary). hi/hj are highlight indices (-1 = none). */
@@ -139,7 +147,8 @@ export class SortContext {
     this.tick();
     this.stats.comparisons++;
     this.push(OP_COMPARE, hi, hj);
-    return x - y;
+    const s = this.shift;
+    return (x >> s) - (y >> s);
   }
 
   /** Compare a[i] with a temporary value v. */
@@ -147,7 +156,8 @@ export class SortContext {
     this.tick();
     this.stats.comparisons++;
     this.push(OP_COMPARE, i, -1);
-    return this.a[i] - v;
+    const s = this.shift;
+    return (this.a[i] >> s) - (v >> s);
   }
 
   lt(i: number, j: number) {

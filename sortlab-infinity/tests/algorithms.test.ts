@@ -93,3 +93,23 @@ for (const algo of ALGORITHMS) {
 
   });
 }
+
+describe('stability (key-only comparisons with original index in the low bits)', () => {
+  const comparisonStable = ALGORITHMS.filter((a) => a.stable && a.category !== 'Distribution' && !a.slow);
+  for (const algo of comparisonStable) {
+    it(`${algo.name} keeps equal keys in original order`, () => {
+      const rng = mulberry32(31337);
+      for (const n of [2, 9, 40, 200, 700]) {
+        for (const u of [1, 2, 4, 25]) {
+          if (n > algo.maxN) continue;
+          const keys = Array.from({ length: n }, () => 1 + Math.floor(rng() * u));
+          const tagged = keys.map((k, i) => (k << 16) | i);
+          const ctx = new SortContext(tagged, { keyShift: 16, seed: 3 });
+          algo.run(ctx);
+          const expected = tagged.slice().sort((x, y) => (x >> 16) - (y >> 16) || x - y);
+          expect(Array.from(ctx.a), `n=${n} u=${u}`).toEqual(expected);
+        }
+      }
+    });
+  }
+});

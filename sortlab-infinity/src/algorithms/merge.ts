@@ -21,20 +21,6 @@ function mergeRuns(ctx: SortContext, buf: AuxArray, lo: number, mid: number, hi:
   while (i < len1) ctx.set(k++, buf.data[i++]);
 }
 
-/** Merge for runs where the right run is shorter: buffer the right run and merge from the end. */
-function mergeRunsHi(ctx: SortContext, buf: AuxArray, lo: number, mid: number, hi: number) {
-  const len2 = hi - mid;
-  for (let i = 0; i < len2; i++) buf.set(i, ctx.get(mid + i));
-  let i = mid - 1;
-  let j = len2 - 1;
-  let k = hi - 1;
-  while (i >= lo && j >= 0) {
-    if (ctx.cmpi(i, buf.data[j]) > 0) ctx.set(k--, ctx.get(i--));
-    else ctx.set(k--, buf.data[j--]);
-  }
-  while (j >= 0) ctx.set(k--, buf.data[j--]);
-}
-
 // ---- in-place merging -----------------------------------------------------
 function lowerBound(ctx: SortContext, lo: number, hi: number, v: number) {
   while (lo < hi) {
@@ -170,52 +156,267 @@ function nextRun(ctx: SortContext, lo: number, n: number, minRun: number): numbe
   return len;
 }
 
-/** Exponential ("galloping") search: first index in [base, base+len) with a[idx] > key (right) or >= key (left). */
-function gallop(ctx: SortContext, key: number, base: number, len: number, right: boolean): number {
-  const before = (idx: number) => {
-    const c = ctx.cmpi(idx, key);
-    return right ? c <= 0 : c < 0;
-  };
-  if (len === 0 || !before(base)) return 0;
-  let last = 0;
+const MIN_GALLOP = 7;
+
+/** Sign of (source[pos] - key) for the main array or a scratch buffer, counted as a comparison. */
+type KeyCmp = (pos: number, key: number) => number;
+
+/**
+ * gallopLeft: returns k with src[base+k-1] < key <= src[base+k], starting the
+ * exponential search at base+hint (Java/CPython TimSort).
+ */
+function gallopLeft(cmp: KeyCmp, key: number, base: number, len: number, hint: number): number {
+  let lastOfs = 0;
   let ofs = 1;
-  while (ofs < len && before(base + ofs)) {
-    last = ofs;
-    ofs = ofs * 2 + 1;
+  if (cmp(base + hint, key) < 0) {
+    const maxOfs = len - hint;
+    while (ofs < maxOfs && cmp(base + hint + ofs, key) < 0) {
+      lastOfs = ofs;
+      ofs = (ofs << 1) + 1;
+    }
+    if (ofs > maxOfs) ofs = maxOfs;
+    lastOfs += hint;
+    ofs += hint;
+  } else {
+    const maxOfs = hint + 1;
+    while (ofs < maxOfs && cmp(base + hint - ofs, key) >= 0) {
+      lastOfs = ofs;
+      ofs = (ofs << 1) + 1;
+    }
+    if (ofs > maxOfs) ofs = maxOfs;
+    const tmp = lastOfs;
+    lastOfs = hint - ofs;
+    ofs = hint - tmp;
   }
-  if (ofs > len) ofs = len;
-  let lo = last + 1;
-  let hi = ofs;
-  while (lo < hi) {
-    const m = (lo + hi) >>> 1;
-    if (before(base + m)) lo = m + 1;
-    else hi = m;
+  lastOfs++;
+  while (lastOfs < ofs) {
+    const m = lastOfs + ((ofs - lastOfs) >>> 1);
+    if (cmp(base + m, key) < 0) lastOfs = m + 1;
+    else ofs = m;
   }
-  return lo;
+  return ofs;
 }
 
-/** Merge adjacent sorted runs [b1, b1+l1) and [b1+l1, b1+l1+l2) with galloping trims. */
-function timMerge(ctx: SortContext, buf: AuxArray, b1: number, l1: number, l2: number) {
-  const b2 = b1 + l1;
-  const k = gallop(ctx, ctx.get(b2), b1, l1, true);
-  b1 += k;
-  l1 -= k;
-  if (l1 === 0) return;
-  l2 = gallop(ctx, ctx.get(b1 + l1 - 1), b2, l2, false);
-  if (l2 === 0) return;
-  if (l1 <= l2) mergeRuns(ctx, buf, b1, b2, b2 + l2);
-  else mergeRunsHi(ctx, buf, b1, b2, b2 + l2);
+/** gallopRight: returns k with src[base+k-1] <= key < src[base+k]. */
+function gallopRight(cmp: KeyCmp, key: number, base: number, len: number, hint: number): number {
+  let ofs = 1;
+  let lastOfs = 0;
+  if (cmp(base + hint, key) > 0) {
+    const maxOfs = hint + 1;
+    while (ofs < maxOfs && cmp(base + hint - ofs, key) > 0) {
+      lastOfs = ofs;
+      ofs = (ofs << 1) + 1;
+    }
+    if (ofs > maxOfs) ofs = maxOfs;
+    const tmp = lastOfs;
+    lastOfs = hint - ofs;
+    ofs = hint - tmp;
+  } else {
+    const maxOfs = len - hint;
+    while (ofs < maxOfs && cmp(base + hint + ofs, key) <= 0) {
+      lastOfs = ofs;
+      ofs = (ofs << 1) + 1;
+    }
+    if (ofs > maxOfs) ofs = maxOfs;
+    lastOfs += hint;
+    ofs += hint;
+  }
+  lastOfs++;
+  while (lastOfs < ofs) {
+    const m = lastOfs + ((ofs - lastOfs) >>> 1);
+    if (cmp(base + m, key) > 0) ofs = m;
+    else lastOfs = m + 1;
+  }
+  return ofs;
+}
+
+/**
+ * TimSort's merge machinery with adaptive galloping (minGallop), following
+ * java.util.TimSort / CPython listobject.c merge_lo / merge_hi.
+ */
+class TimMerger {
+  minGallop = MIN_GALLOP;
+  private readonly mainCmp: KeyCmp;
+  private readonly tmpCmp: KeyCmp;
+  constructor(
+    private ctx: SortContext,
+    private tmp: AuxArray,
+  ) {
+    this.mainCmp = (pos, key) => ctx.cmpi(pos, key);
+    this.tmpCmp = (pos, key) => ctx.cmpv(tmp.data[pos], key);
+  }
+
+  /** Merge adjacent runs [base1, base1+len1) and [base2, base2+len2). */
+  mergeAt(base1: number, len1: number, base2: number, len2: number) {
+    const ctx = this.ctx;
+    const k = gallopRight(this.mainCmp, ctx.get(base2), base1, len1, 0);
+    base1 += k;
+    len1 -= k;
+    if (len1 === 0) return;
+    len2 = gallopLeft(this.mainCmp, ctx.get(base1 + len1 - 1), base2, len2, len2 - 1);
+    if (len2 === 0) return;
+    if (len1 <= len2) this.mergeLo(base1, len1, base2, len2);
+    else this.mergeHi(base1, len1, base2, len2);
+  }
+
+  private mergeLo(base1: number, len1: number, base2: number, len2: number) {
+    const ctx = this.ctx;
+    const tmp = this.tmp;
+    for (let i = 0; i < len1; i++) tmp.set(i, ctx.get(base1 + i));
+    const T = tmp.data;
+    let cursor1 = 0;
+    let cursor2 = base2;
+    let dest = base1;
+    ctx.set(dest++, ctx.get(cursor2++));
+    if (--len2 === 0) {
+      for (let i = 0; i < len1; i++) ctx.set(dest + i, T[cursor1 + i]);
+      return;
+    }
+    if (len1 === 1) {
+      for (let i = 0; i < len2; i++) ctx.set(dest + i, ctx.get(cursor2 + i));
+      ctx.set(dest + len2, T[cursor1]);
+      return;
+    }
+    let minGallop = this.minGallop;
+    outer: for (;;) {
+      let count1 = 0;
+      let count2 = 0;
+      do {
+        if (ctx.cmpi(cursor2, T[cursor1]) < 0) {
+          ctx.set(dest++, ctx.get(cursor2++));
+          count2++;
+          count1 = 0;
+          if (--len2 === 0) break outer;
+        } else {
+          ctx.set(dest++, T[cursor1++]);
+          count1++;
+          count2 = 0;
+          if (--len1 === 1) break outer;
+        }
+      } while ((count1 | count2) < minGallop);
+      do {
+        count1 = gallopRight(this.tmpCmp, ctx.get(cursor2), cursor1, len1, 0);
+        if (count1 !== 0) {
+          for (let i = 0; i < count1; i++) ctx.set(dest + i, T[cursor1 + i]);
+          dest += count1;
+          cursor1 += count1;
+          len1 -= count1;
+          if (len1 <= 1) break outer;
+        }
+        ctx.set(dest++, ctx.get(cursor2++));
+        if (--len2 === 0) break outer;
+        count2 = gallopLeft(this.mainCmp, T[cursor1], cursor2, len2, 0);
+        if (count2 !== 0) {
+          for (let i = 0; i < count2; i++) ctx.set(dest + i, ctx.get(cursor2 + i));
+          dest += count2;
+          cursor2 += count2;
+          len2 -= count2;
+          if (len2 === 0) break outer;
+        }
+        ctx.set(dest++, T[cursor1++]);
+        if (--len1 === 1) break outer;
+        minGallop--;
+      } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
+      if (minGallop < 0) minGallop = 0;
+      minGallop += 2;
+    }
+    this.minGallop = minGallop < 1 ? 1 : minGallop;
+    if (len1 === 1) {
+      for (let i = 0; i < len2; i++) ctx.set(dest + i, ctx.get(cursor2 + i));
+      ctx.set(dest + len2, T[cursor1]);
+    } else if (len1 === 0) {
+      throw new Error('Comparison method violates its general contract');
+    } else {
+      for (let i = 0; i < len1; i++) ctx.set(dest + i, T[cursor1 + i]);
+    }
+  }
+
+  private mergeHi(base1: number, len1: number, base2: number, len2: number) {
+    const ctx = this.ctx;
+    const tmp = this.tmp;
+    for (let i = 0; i < len2; i++) tmp.set(i, ctx.get(base2 + i));
+    const T = tmp.data;
+    let cursor1 = base1 + len1 - 1;
+    let cursor2 = len2 - 1;
+    let dest = base2 + len2 - 1;
+    ctx.set(dest--, ctx.get(cursor1--));
+    if (--len1 === 0) {
+      for (let i = 0; i < len2; i++) ctx.set(dest - (len2 - 1) + i, T[i]);
+      return;
+    }
+    if (len2 === 1) {
+      dest -= len1;
+      cursor1 -= len1;
+      for (let i = len1 - 1; i >= 0; i--) ctx.set(dest + 1 + i, ctx.get(cursor1 + 1 + i));
+      ctx.set(dest, T[cursor2]);
+      return;
+    }
+    let minGallop = this.minGallop;
+    outer: for (;;) {
+      let count1 = 0;
+      let count2 = 0;
+      do {
+        if (ctx.cmpi(cursor1, T[cursor2]) > 0) {
+          ctx.set(dest--, ctx.get(cursor1--));
+          count1++;
+          count2 = 0;
+          if (--len1 === 0) break outer;
+        } else {
+          ctx.set(dest--, T[cursor2--]);
+          count2++;
+          count1 = 0;
+          if (--len2 === 1) break outer;
+        }
+      } while ((count1 | count2) < minGallop);
+      do {
+        count1 = len1 - gallopRight(this.mainCmp, T[cursor2], base1, len1, len1 - 1);
+        if (count1 !== 0) {
+          dest -= count1;
+          cursor1 -= count1;
+          len1 -= count1;
+          for (let i = count1 - 1; i >= 0; i--) ctx.set(dest + 1 + i, ctx.get(cursor1 + 1 + i));
+          if (len1 === 0) break outer;
+        }
+        ctx.set(dest--, T[cursor2--]);
+        if (--len2 === 1) break outer;
+        count2 = len2 - gallopLeft(this.tmpCmp, ctx.get(cursor1), 0, len2, len2 - 1);
+        if (count2 !== 0) {
+          dest -= count2;
+          cursor2 -= count2;
+          len2 -= count2;
+          for (let i = 0; i < count2; i++) ctx.set(dest + 1 + i, T[cursor2 + 1 + i]);
+          if (len2 <= 1) break outer;
+        }
+        ctx.set(dest--, ctx.get(cursor1--));
+        if (--len1 === 0) break outer;
+        minGallop--;
+      } while (count1 >= MIN_GALLOP || count2 >= MIN_GALLOP);
+      if (minGallop < 0) minGallop = 0;
+      minGallop += 2;
+    }
+    this.minGallop = minGallop < 1 ? 1 : minGallop;
+    if (len2 === 1) {
+      dest -= len1;
+      cursor1 -= len1;
+      for (let i = len1 - 1; i >= 0; i--) ctx.set(dest + 1 + i, ctx.get(cursor1 + 1 + i));
+      ctx.set(dest, T[cursor2]);
+    } else if (len2 === 0) {
+      throw new Error('Comparison method violates its general contract');
+    } else {
+      for (let i = 0; i < len2; i++) ctx.set(dest - (len2 - 1) + i, T[i]);
+    }
+  }
 }
 
 function timSort(ctx: SortContext) {
   const n = ctx.n;
   if (n < 2) return;
-  const buf = ctx.aux(n);
+  const merger = new TimMerger(ctx, ctx.aux(Math.ceil(n / 2) + 1));
   const minRun = minRunLength(n);
   const base: number[] = [];
   const len: number[] = [];
   const mergeAt = (i: number) => {
-    timMerge(ctx, buf, base[i], len[i], len[i + 1]);
+    merger.mergeAt(base[i], len[i], base[i + 1], len[i + 1]);
     len[i] += len[i + 1];
     base.splice(i + 1, 1);
     len.splice(i + 1, 1);
@@ -245,7 +446,7 @@ function timSort(ctx: SortContext) {
 function powerSort(ctx: SortContext) {
   const n = ctx.n;
   if (n < 2) return;
-  const buf = ctx.aux(n);
+  const merger = new TimMerger(ctx, ctx.aux(Math.ceil(n / 2) + 1));
   const minRun = Math.min(32, n);
   const power = (s1: number, n1: number, n2: number) => {
     let a = (2 * s1 + n1) / (2 * n);
@@ -269,7 +470,7 @@ function powerSort(ctx: SortContext) {
     const p = power(s1, n1, n2);
     while (stack.length && stack[stack.length - 1].p > p) {
       const top = stack.pop()!;
-      timMerge(ctx, buf, top.s, top.l, n1);
+      merger.mergeAt(top.s, top.l, top.s + top.l, n1);
       s1 = top.s;
       n1 = top.l + n1;
     }
@@ -279,7 +480,7 @@ function powerSort(ctx: SortContext) {
   }
   while (stack.length) {
     const top = stack.pop()!;
-    timMerge(ctx, buf, top.s, top.l, n1);
+    merger.mergeAt(top.s, top.l, top.s + top.l, n1);
     s1 = top.s;
     n1 = top.l + n1;
   }
@@ -508,9 +709,9 @@ export const mergeSorts: AlgoDef[] = [
     stable: true,
     inPlace: false,
     maxN: 65536,
-    notes: 'Tim Peters (2002). Implements run detection, minrun, binary insertion, the run-stack invariants and galloping merge boundaries; does not implement galloping mode inside merges.',
+    notes: 'Tim Peters (2002). Full algorithm as in CPython / java.util.TimSort: run detection, minrun, binary insertion, the corrected run-stack invariants (de Gouw et al. 2015), galloping merge-boundary trimming, merge_lo / merge_hi with adaptive galloping mode (MIN_GALLOP = 7).',
     description:
-      'The hybrid behind Python and Java object sorting. Scans for natural runs (reversing descending ones), extends short runs to minrun with binary insertion, and keeps a stack of runs whose lengths obey Fibonacci-like invariants so merges stay balanced. Galloping search trims each merge.',
+      'The hybrid behind Python and Java object sorting. It scans for natural runs (reversing strictly descending ones), extends short runs to minrun with binary insertion, and keeps a stack of runs whose lengths obey Fibonacci-like invariants so merges stay balanced. Each merge copies only the smaller run to a buffer. When one side keeps winning, it switches into galloping mode: exponential search copies whole stretches at once, and the minGallop threshold adapts to how often galloping pays off.',
     run(ctx) {
       timSort(ctx);
     },
@@ -526,7 +727,7 @@ export const mergeSorts: AlgoDef[] = [
     stable: true,
     inPlace: false,
     maxN: 65536,
-    notes: 'Munro & Wild (2018). Merge policy adopted by CPython 3.11.',
+    notes: 'Munro & Wild (2018). Merge policy adopted by CPython 3.11; uses the same galloping merges as TimSort.',
     description:
       'A TimSort-style natural merge sort with a provably near-optimal merge policy: each run boundary gets a "power" from its position in a virtual binary tree, and runs are merged when a boundary of higher power is seen.',
     run(ctx) {

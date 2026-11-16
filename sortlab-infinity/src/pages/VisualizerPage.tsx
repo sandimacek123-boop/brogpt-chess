@@ -8,6 +8,7 @@ import { effectiveSpeed, MAX_N, N_STEPS } from '../state/settings';
 import { Button, Card, Field, fmtInt, fmtMs, fmtSpeed, logScale, Segmented, Select, Slider, Stat } from '../ui/controls';
 import { IconFullscreen, IconPause, IconPlay, IconRestart, IconShuffle, IconSkip, IconStep, IconWarn } from '../ui/icons';
 import RecordingPanel from '../ui/RecordingPanel';
+import { isNative } from '../native';
 
 const SPEED_MIN = 1;
 const SPEED_MAX = 500_000;
@@ -135,7 +136,7 @@ export default function VisualizerPage({ controller }: { controller: VisualizerC
         <div className="absolute left-0 right-0 top-0 h-[3px] bg-white/[0.04]">
           <div className="rainbow-line h-full transition-[width] duration-100" style={{ width: `${st.progress * 100}%` }} />
         </div>
-        <button
+        {!isNative() && <button
           type="button"
           onClick={toggleFullscreen}
           aria-label="Toggle fullscreen"
@@ -143,7 +144,7 @@ export default function VisualizerPage({ controller }: { controller: VisualizerC
           className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-black/40 text-ink-300 backdrop-blur transition hover:text-white"
         >
           <IconFullscreen />
-        </button>
+        </button>}
         {st.phase === 'computing' && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-ink-900/90 px-6 py-5">

@@ -1,6 +1,6 @@
 # SortLab Infinity
 
-A high-performance sorting algorithm visualizer: **101 tested algorithms**, **20 visualization modes** (including two WebGL 3D modes), synthesized sound, an 8-lane algorithm battle mode and WebM/MP4 video export.
+A high-performance sorting algorithm visualizer: **103 tested algorithms** (including GrailSort, WikiSort and full TimSort), **20 visualization modes** (including two WebGL 3D modes), synthesized sound, an 8-lane algorithm battle mode and WebM/MP4 video export. Runs in any browser and as an **Android app (APK)**.
 
 Built with React 19, TypeScript, Vite, Tailwind CSS 4, Canvas 2D, Three.js (lazy-loaded), the Web Audio API and Web Workers.
 
@@ -17,11 +17,26 @@ npm run dev        # http://localhost:5173
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Start the Vite dev server with hot reload |
-| `npm test` | Run the full Vitest suite (348 tests) |
+| `npm test` | Run the full Vitest suite (393 tests) |
 | `npm run test:watch` | Tests in watch mode |
 | `npm run typecheck` | TypeScript type check |
 | `npm run build` | Type-check and produce a production build in `dist/` |
 | `npm run preview` | Serve the production build locally |
+
+### Android app (APK)
+
+The app is wrapped with [Capacitor](https://capacitorjs.com/) — the same web build runs inside a native Android shell (`android/`). Recordings are saved through the Android share sheet, since WebViews can't download files.
+
+Requirements: JDK 17+ and the Android SDK (platform 35, build-tools 35). Then:
+
+```bash
+npm run build
+npx cap sync android
+cd android
+./gradlew assembleRelease        # app/build/outputs/apk/release/app-release.apk
+```
+
+Without signing properties the release APK is signed with the local debug key, which is fine for installing on your own phone. To sign with your own key, pass `-PSORTLAB_STORE_FILE=… -PSORTLAB_STORE_PASSWORD=… -PSORTLAB_KEY_ALIAS=… -PSORTLAB_KEY_PASSWORD=…` (never commit keystores). Install by opening the APK on the phone and allowing "Install unknown apps" for the app you opened it with.
 
 ### Deploying
 
@@ -43,7 +58,7 @@ npm run dev        # http://localhost:5173
 ```
 src/
   core/        SortContext (instrumented array), trace encoding, patterns, seeded RNG, executeSort
-  algorithms/  101 algorithms grouped by family, all written against SortContext
+  algorithms/  103 algorithms grouped by family, all written against SortContext
   workers/     Web Worker entry: runs executeSort off the main thread
   engine/      SortClient (worker RPC + cancellation), Player (trace playback),
                Stage (canvas + renderer + adaptive quality), Visualizer & Battle controllers
@@ -76,18 +91,21 @@ src/
 | Selection (17) | Selection Sort, Double Selection Sort, Bingo Sort, Heap Sort, Heap Sort — Williams' Construction, Bottom-Up Heap Sort, Ternary Heap Sort, Weak Heap Sort, Smoothsort, Tournament Sort, Stable Selection Sort, Quadratic Selection Sort, Comparison Counting Sort, Quaternary Heap Sort, Poplar Sort, Cycle Sort, Pancake Sort |
 | Tree (5) | Tree Sort, AVL Tree Sort, Red–Black Tree Sort, Splaysort, Cartesian Tree Sort |
 | Quick (12) | Quick Sort (Lomuto), Quick Sort, Quick Sort (Median of 3), Quick Sort (Tukey Ninther), Randomized Quick Sort, 3-Way Quick Sort (Dijkstra), 3-Way Quick Sort (Bentley–McIlroy), Dual-Pivot Quick Sort, Quick Sort + Insertion Cutoff, Stable Quick Sort, Quick Sort (Median of Medians), Samplesort |
-| Merge (9) | Merge Sort, Bottom-Up Merge Sort, Natural Merge Sort, 3-Way Merge Sort, In-Place Merge Sort (Rotations), SymMerge Sort, Strand Sort, Patience Sort, Merge-Insertion Sort (Ford–Johnson) |
+| Merge (11) | Merge Sort, Bottom-Up Merge Sort, Natural Merge Sort, 3-Way Merge Sort, In-Place Merge Sort (Rotations), SymMerge Sort, Strand Sort, Patience Sort, Merge-Insertion Sort (Ford–Johnson), GrailSort, WikiSort |
 | Hybrid (5) | IntroSort, Pattern-Defeating Quicksort, Merge Sort + Insertion Cutoff, TimSort, Powersort |
 | Distribution (15) | Counting Sort, Pigeonhole Sort, Bucket Sort, LSD Radix Sort (Base 2), LSD Radix Sort (Base 4), LSD Radix Sort (Base 10), LSD Radix Sort (Base 16), MSD Radix Sort (Base 4), MSD Radix Sort (Base 10), American Flag Sort, Binary Radix Exchange Sort, Flashsort, Proxmap Sort, Interpolation Sort, Gravity (Bead) Sort |
 | Network (6) | Bitonic Sort, Odd–Even Merge Sort, Batcher's Merge-Exchange Sort, Bose–Nelson Sort, Pairwise Sorting Network, Periodic Balanced Sorting Network |
 | Impractical (5) | Stooge Sort, Slowsort, Bogo Sort, Bozo Sort, Permutation Sort |
 
-Variants (e.g. Shellsort gap sequences, radix bases, heap arity) are labelled with the parameter that makes them different. Algorithms that are not yet implemented (GrailSort, WikiSort / block merge sort) are listed in [ROADMAP.md](./ROADMAP.md) rather than shipped under a borrowed name.
+Variants (e.g. Shellsort gap sequences, radix bases, heap arity) are labelled with the parameter that makes them different.
 
 ## Tests
 
 `npm test` runs:
 
+- **Stress tests** for GrailSort, WikiSort, TimSort and Powersort: 20 sizes up to 5,000 × 11 value distributions (from all-equal to all-distinct), which forces the "too few unique keys" fallback paths.
+- **Stability** for every comparison sort that claims it: values carry their original index in the low bits and the context compares only the high bits.
+- **TimSort galloping**: interleaved block runs must merge with far fewer comparisons than a plain merge, and sorted/reversed input stays linear.
 - **Correctness** for every algorithm on all 11 starting patterns at sizes 0, 1, 2, 3, 5, 8, 17, 31, 64, 100, 257, plus duplicates, all-equal, empty and single-element arrays — and the recorded trace must replay to the same sorted result.
 - **Statistics** — trace contents match the counters; exact known counts (bubble sort on reversed input, selection sort, sorted-input insertion sort, cycle sort's write optimality, zero comparisons for LSD radix, Ford–Johnson's optimal comparison counts for n ≤ 11).
 - **Operation limits and cancellation** — exact stop at the limit, abort callbacks, deadlines.

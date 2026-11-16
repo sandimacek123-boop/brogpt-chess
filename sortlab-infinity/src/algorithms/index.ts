@@ -8,6 +8,7 @@ import { mergeSorts } from './merge';
 import { distributionSorts } from './distribution';
 import { networkSorts } from './network';
 import { miscSorts } from './misc';
+import { blockMergeSorts } from './blockmerge';
 
 const defs: AlgoDef[] = [
   ...exchangeSorts,
@@ -16,6 +17,7 @@ const defs: AlgoDef[] = [
   ...treeSorts,
   ...quickSorts,
   ...mergeSorts,
+  ...blockMergeSorts,
   ...distributionSorts,
   ...networkSorts,
   ...miscSorts,

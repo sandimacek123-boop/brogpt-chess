@@ -11,6 +11,7 @@ const PRESETS: { name: string; ids: string[] }[] = [
   { name: 'Quadratic classics', ids: ['bubble', 'insertion', 'selection', 'cocktail'] },
   { name: 'n log n heavyweights', ids: ['quick', 'merge', 'heap', 'tim'] },
   { name: 'Hybrids', ids: ['intro', 'pdq', 'tim', 'powersort'] },
+  { name: 'Stable in-place block merges', ids: ['grail', 'wiki', 'symmerge', 'merge-inplace', 'tim', 'merge'] },
   { name: 'Quicksort family', ids: ['quick-lomuto', 'quick', 'quick-dual', 'quick-3way', 'quick-bm', 'intro'] },
   { name: 'Non-comparison', ids: ['counting', 'radix-lsd-10', 'radix-msd-4', 'american-flag', 'flash', 'bucket'] },
   { name: 'Sorting networks', ids: ['bitonic', 'odd-even-merge', 'merge-exchange', 'pairwise', 'bose-nelson', 'periodic-balanced'] },

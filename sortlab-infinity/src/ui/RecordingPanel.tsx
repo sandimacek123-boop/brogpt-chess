@@ -5,6 +5,7 @@ import { useSettings } from '../state/SettingsContext';
 import { getAlgorithm } from '../algorithms';
 import { Button, Card, Field, Select, Toggle } from './controls';
 import { IconDownload, IconRecord, IconStop } from './icons';
+import { isNative, saveAndShareNative } from '../native';
 
 type RecState = 'idle' | 'recording' | 'finalizing';
 
@@ -18,14 +19,14 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
   const [state, setState] = useState<RecState>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [bytes, setBytes] = useState(0);
-  const [video, setVideo] = useState<{ url: string; name: string; size: number; type: string } | null>(null);
+  const [video, setVideo] = useState<{ url: string; name: string; size: number; type: string; blob: Blob } | null>(null);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const recRef = useRef<CanvasRecorder | null>(null);
   const timerRef = useRef<number>(0);
 
   useEffect(() => () => {
     window.clearInterval(timerRef.current);
     if (video) URL.revokeObjectURL(video.url);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!recordingSupported() || formats.length === 0) {
@@ -52,7 +53,8 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
     if (video) URL.revokeObjectURL(video.url);
     const algo = getAlgorithm(settings.algorithmId);
     const name = `sortlab-${algo.id}-${status.n}-${settings.mode}.${f.ext}`;
-    setVideo({ url: URL.createObjectURL(blob), name, size: blob.size, type: blob.type });
+    setVideo({ url: URL.createObjectURL(blob), name, size: blob.size, type: blob.type, blob });
+    setSaveMsg(null);
     setState('idle');
   };
 
@@ -155,13 +157,28 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
       {video && state === 'idle' && (
         <div className="mt-4 flex flex-col gap-3">
           <video src={video.url} controls playsInline className="max-h-64 w-full rounded-xl border border-white/10 bg-black" />
-          <a
-            href={video.url}
-            download={video.name}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-ink-950 transition hover:bg-white/90"
-          >
-            <IconDownload /> Download {video.name} ({(video.size / 1048576).toFixed(1)} MB)
-          </a>
+          {isNative() ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setSaveMsg('Preparing…');
+                saveAndShareNative(video.blob, video.name)
+                  .then(() => setSaveMsg(null))
+                  .catch((e: Error) => setSaveMsg(`Could not share: ${e.message}`));
+              }}
+            >
+              <IconDownload /> Save / share {video.name} ({(video.size / 1048576).toFixed(1)} MB)
+            </Button>
+          ) : (
+            <a
+              href={video.url}
+              download={video.name}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-ink-950 transition hover:bg-white/90"
+            >
+              <IconDownload /> Download {video.name} ({(video.size / 1048576).toFixed(1)} MB)
+            </a>
+          )}
+          {saveMsg && <p className="text-xs text-ink-300">{saveMsg}</p>}
         </div>
       )}
     </Card>
