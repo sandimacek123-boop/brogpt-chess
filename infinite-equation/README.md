@@ -59,7 +59,7 @@ To view one frame, use `index.html?t=8.5&scale=0.5&fit=1`.
 A second 15 s, 1080×1920, 60 fps film made with the same engine: a fan edit about the Cicada 3301 puzzles.
 It is built on a **120 BPM beat grid** (one beat = 0.5 s = 30 frames), so every cut and impact lands on a beat.
 Pick a 120 BPM sound in TikTok and line its first downbeat up with **4.0 s** (the "3301" hit). The big drop is at **8.0 s**.
-`cicada.html?bpm=…` re-times the whole edit to a different tempo.
+`cicada.html?bpm=…` re-times every beat-locked event (stay near 120 so it fits in 15 s).
 
 | Time | Section |
 |---|---|

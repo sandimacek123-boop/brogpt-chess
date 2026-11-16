@@ -9,7 +9,7 @@
     "encode": "node render.js encode --out out/final",
     "cicada:preview": "node render.js stills --page cicada.html --scale 0.4 --out out/cstills",
     "cicada:render": "node render.js frames --page cicada.html --scale 1 --sub 6 --workers 2 --out out/cfinal",
-    "cicada:encode": "node render.js encode --out out/cfinal --name cicada-3301-edit.mp4"
+    "cicada:encode": "node render.js encode --out out/cfinal --name cicada-3301-edit.mp4 --crf 19"
   },
   "license": "ISC",
   "dependencies": {

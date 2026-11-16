@@ -577,14 +577,18 @@ function update(t) {
 }
 
 // ------------------------------------------------------------------ frame rendering
+let CUTS = [];
 const halton = (i, bb) => { let f = 1, r = 0; while (i > 0) { f /= bb; r += f * (i % bb); i = Math.floor(i / bb); } return r; };
 function renderAt(frame) {
   const tc = frame / FPS;
   renderer.setRenderTarget(rtAccum);
   renderer.setClearColor(0x000000, 1);
   renderer.clear();
+  // the shutter never straddles a hard cut: if a cut falls inside it, open the shutter at the cut
+  let lo = tc - SHUTTER / 2 / FPS, hi = tc + SHUTTER / 2 / FPS;
+  for (const c of CUTS) if (c > lo && c <= tc + 1e-9) { lo = c; hi = c + SHUTTER / FPS; }
   for (let s = 0; s < SUB; s++) {
-    const ts = SUB > 1 ? clamp(tc + (((s + 0.5) / SUB - 0.5) * SHUTTER) / FPS, 0, DUR - 1e-4) : tc;
+    const ts = SUB > 1 ? clamp(lerp(lo, hi, (s + 0.5) / SUB), 0, DUR - 1e-4) : tc;
     update(ts);
     const jx = SUB > 1 ? halton(s + 1, 2) - 0.5 : 0, jy = SUB > 1 ? halton(s + 1, 3) - 0.5 : 0;
     camera.setViewOffset(W, H, jx + SHAKE.x, jy + SHAKE.y, W, H);
@@ -620,6 +624,7 @@ window.grab = (type = 'image/png', q) => renderer.domElement.toDataURL(type, q);
 window.META = { W, H, FPS, DUR, FRAMES: 900, SUB, BPM };
 
 build().then(() => {
+  CUTS = [...new Set([...E.cards.flatMap((c) => [c.t0, c.t1]), b(8), b(16), b(24), b(28)])];
   window.READY = true; window.E = E; window.SCENE = scene; // debug handles
   const t0 = Q.get('t');
   if (t0 != null) renderAt(Math.round(+t0 * FPS));
