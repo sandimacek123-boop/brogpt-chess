@@ -11,12 +11,16 @@ const FAM = {
   size1: 'KaTeX_Size1',
   gar: 'Cormorant Garamond',
   inter: 'Inter',
+  anton: 'Anton',
+  mono: 'JetBrains Mono',
+  monob: 'JetBrains Mono',
+  runic: 'Noto Sans Runic',
 };
 
 // ---------------------------------------------------------------- layout boxes
 const mctx = document.createElement('canvas').getContext('2d');
 function fontStr(fam, px, style = '') {
-  const weight = fam === 'gar' ? '600 ' : fam === 'inter' ? '300 ' : '';
+  const weight = fam === 'gar' ? '600 ' : fam === 'inter' ? '300 ' : fam === 'monob' ? '700 ' : '';
   const italic = fam === 'math' ? 'italic ' : style;
   return `${italic}${weight}${px}px "${FAM[fam]}"`;
 }

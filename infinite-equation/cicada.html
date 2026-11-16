@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cicada 3301 Edit</title>
+<style>
+  @font-face { font-family: "Anton"; src: url(node_modules/@fontsource/anton/files/anton-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url(node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url(node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-700-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Noto Sans Runic"; src: url(node_modules/@fontsource/noto-sans-runic/files/noto-sans-runic-runic-400-normal.woff2) format("woff2"); unicode-range: U+16A0-16FF; }
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #c33; font: 12px monospace; z-index: 2; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/",
+  "opentype.js": "./node_modules/opentype.js/dist/opentype.module.js"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module" src="./src/cicada/main.js"></script>
+</body>
+</html>

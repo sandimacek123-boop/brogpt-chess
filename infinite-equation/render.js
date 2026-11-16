@@ -3,6 +3,7 @@
 //   node render.js stills --scale 0.5 --times 1,3,5          -> out/stills/*.png
 //   node render.js frames --scale 1 --sub 4 --workers 2       -> out/frames/f_00000.png ...
 //   node render.js encode                                     -> out/the-infinite-equation.mp4
+//   add --page cicada.html to render the Cicada 3301 edit instead
 // Frames are rendered deterministically by index, so rendering is resumable and
 // can be split across parallel browser workers.
 const http = require('http');
@@ -35,7 +36,7 @@ async function openPage(browser, port, extra = '') {
   const page = await browser.newPage({ viewport: { width: W, height: H } });
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text()); });
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));
-  await page.goto(`http://localhost:${port}/index.html?scale=${SCALE}&sub=${SUB}${extra}`);
+  await page.goto(`http://localhost:${port}/${opt('page', 'index.html')}?scale=${SCALE}&sub=${SUB}${extra}`);
   await page.waitForFunction(() => window.READY || window.ERROR, null, { timeout: 120000 });
   const err = await page.evaluate(() => window.ERROR);
   if (err) throw new Error(err);
