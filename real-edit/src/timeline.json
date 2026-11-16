@@ -1,0 +1,39 @@
+{
+  "fps": 60,
+  "frames": 900,
+  "bpm": 150,
+  "beatFrames": 24,
+  "drop": 270,
+  "scenes": {
+    "awakening": [0, 126],
+    "buildup": [126, 270],
+    "drop": [270, 366],
+    "execution": [366, 558],
+    "climax": [558, 750],
+    "final": [750, 900]
+  },
+  "hits": {
+    "logoReveal": 102,
+    "textReal": 126,
+    "textPrecision": 174,
+    "textPerformance": 222,
+    "inhale": 258,
+    "drop": 270,
+    "dropPulse1": 294,
+    "dropPulse2": 318,
+    "dropPulse3": 342,
+    "whipOut": 354,
+    "textUNC": 366,
+    "textSUNC": 414,
+    "textStability": 462,
+    "textOneKey": 510,
+    "diveOut": 540,
+    "climaxEntry": 558,
+    "inkImpact": 654,
+    "finalBuild": 702,
+    "finalInhale": 738,
+    "finalImpact": 750,
+    "textBeyond": 798,
+    "fadeStart": 852
+  }
+}
