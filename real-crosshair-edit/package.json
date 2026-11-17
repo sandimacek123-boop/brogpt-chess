@@ -1,0 +1,37 @@
+{
+  "name": "real-crosshair-edit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "REAL — spinning crosshair edit (Remotion, 1080x1920, 60fps, 900 frames)",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "preview": "node --import tsx server/render-server.ts",
+    "render": "node --import tsx scripts/render.ts",
+    "render:music": "node --import tsx scripts/render.ts --music",
+    "analyze-audio": "node --import tsx scripts/analyze-audio.ts",
+    "verify": "node --import tsx scripts/verify.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/geist": "5.3.0",
+    "@fontsource/geist-mono": "5.3.0",
+    "@fontsource/montserrat": "5.3.0",
+    "@remotion/bundler": "4.0.540",
+    "@remotion/cli": "4.0.540",
+    "@remotion/player": "4.0.540",
+    "@remotion/renderer": "4.0.540",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "remotion": "4.0.540"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "@vitejs/plugin-react": "6.1.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  }
+}
