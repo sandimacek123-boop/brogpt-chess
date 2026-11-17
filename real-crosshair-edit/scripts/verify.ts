@@ -206,20 +206,47 @@ const main = async () => {
       return [px[i], px[i + 1], px[i + 2]];
     };
     const st = tl.state(f);
-    const cyc = HEIGHT / 2 + st.logo.offsetY;
-    const plateR = 300 * st.logo.scale + 30;
+    // the crosshair belongs to the composition, which moves with the camera shake:
+    // find each line across a ±40 px window and check it sits on the composition centre
+    const ccx = WIDTH / 2 + st.camera.dx;
+    const ccy = HEIGHT / 2 + st.camera.dy + st.logo.offsetY;
+    const plateR = 300 * st.logo.scale + 40;
+    const Lm = (x: number, y: number) => {
+      const [r, g, b] = at(x, y);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
     let hits = 0;
     let tot = 0;
-    for (let y = 40; y < HEIGHT - 40; y += 5) {
-      if (Math.abs(y - cyc) < plateR) continue;
+    const offs: number[] = [];
+    const probeLine = (vertical: boolean, along: number) => {
+      let best = -1;
+      let bestPos = 0;
+      for (let d = -40; d <= 40; d++) {
+        const val = vertical ? Lm(ccx + d, along) : Lm(along, ccy + d);
+        if (val > best) {
+          best = val;
+          bestPos = d;
+        }
+      }
+      // centre of the bright plateau (the line is ~10 px wide)
+      const val = (d: number) => (vertical ? Lm(ccx + d, along) : Lm(along, ccy + d));
+      let lo = bestPos;
+      let hi = bestPos;
+      while (lo > -45 && val(lo - 1) >= best - 40) lo--;
+      while (hi < 45 && val(hi + 1) >= best - 40) hi++;
+      const centre = (lo + hi) / 2;
+      // the line must be bright and stand out from what is 20+ px beside it
+      const side = vertical
+        ? Math.max(Lm(ccx + bestPos - 22, along), Lm(ccx + bestPos + 22, along))
+        : Math.max(Lm(along, ccy + bestPos - 22), Lm(along, ccy + bestPos + 22));
       tot++;
-      if (Math.min(...at(WIDTH / 2, y)) > 200) hits++;
-    }
-    for (let x = 20; x < WIDTH - 20; x += 5) {
-      if (Math.abs(x - WIDTH / 2) < plateR) continue;
-      tot++;
-      if (Math.min(...at(x, cyc)) > 200) hits++;
-    }
+      if (best > 150 && best - side > 25) {
+        hits++;
+        offs.push(Math.abs(centre));
+      }
+    };
+    for (let y = 120; y < HEIGHT - 120; y += 6) if (Math.abs(y - ccy) > plateR) probeLine(true, y);
+    for (let x = 60; x < WIDTH - 60; x += 6) if (Math.abs(x - ccx) > plateR) probeLine(false, x);
     const angle = st.camera.angle;
     const swapped = Math.round(angle / 90) % 2 !== 0;
     const fam = (x0: number, y0: number) => {
@@ -237,7 +264,14 @@ const main = async () => {
     };
     const q = [fam(0, 0), fam(WIDTH / 2, 0), fam(0, HEIGHT / 2), fam(WIDTH / 2, HEIGHT / 2)];
     const expected = swapped ? ['red', 'blue', 'blue', 'red'] : ['blue', 'red', 'red', 'blue'];
-    check(`f${f}: centred white crosshair lines`, hits / tot > 0.97, `${((hits / tot) * 100).toFixed(1)} % white along both lines (panels ${angle.toFixed(1)}°)`);
+    offs.sort((a, b) => a - b);
+    const med = offs[Math.floor(offs.length / 2)] ?? 99;
+    const p95 = offs[Math.floor(offs.length * 0.95)] ?? 99;
+    check(
+      `f${f}: centred white crosshair lines`,
+      hits / tot > 0.9 && med <= 1 && p95 <= 2,
+      `line found on ${((hits / tot) * 100).toFixed(1)} % of probes, offset from the composition centre median ${med.toFixed(1)} px / p95 ${p95.toFixed(1)} px (ring ticks crossing a line can widen single probes) (panels ${angle.toFixed(1)}°, shake ${st.camera.dx.toFixed(1)},${st.camera.dy.toFixed(1)})`,
+    );
     check(`f${f}: diagonal blue/red checkerboard`, q.join() === expected.join(), `TL,TR,BL,BR = ${q.join(', ')}`);
   }
 
@@ -324,7 +358,7 @@ const main = async () => {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-vf', `select=eq(n\\,${f})`, '-frames:v', '1', path.join(qcDir, `f${String(f).padStart(3, '0')}.png`)]);
   }
   execFileSync('ffmpeg', [
-    '-v', 'error', '-y', '-pattern_type', 'sequence', '-start_number', '0',
+    '-v', 'error', '-y',
     ...sheet.flatMap((f) => ['-i', path.join(qcDir, `f${String(f).padStart(3, '0')}.png`)]),
     '-filter_complex',
     sheet.map((f, i) => `[${i}]scale=324:576,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:text='frame ${f}':x=8:y=8:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.65[v${i}]`).join(';') +

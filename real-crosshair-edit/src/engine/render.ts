@@ -384,7 +384,7 @@ export const renderFrame = (
   assets: Assets,
   tl: Timeline,
   targets: RenderTargets,
-  opts: {maxSamples?: number} = {},
+  opts: {maxSamples?: number; skipGuard?: boolean} = {},
 ): FrameInfo => {
   const st = tl.state(frame);
   const pal = props.palette;
@@ -441,12 +441,6 @@ export const renderFrame = (
       pctx.globalAlpha = 1;
     }
     pctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (props.paletteGuard && samples > 1) {
-      const img = pctx.getImageData(0, 0, WIDTH, HEIGHT);
-      guardPalette(img.data, assets.guardTable);
-      pctx.putImageData(img, 0, 0);
-      guard = true;
-    }
     const g = st.grade;
     const contrast = g.contrast * props.contrast;
     const bright = g.brightness * props.brightness;
@@ -536,7 +530,17 @@ export const renderFrame = (
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  // --- 5c. impact flash (short, capped – logo stays readable above it) ----------------
+  // --- 5c. palette guard on everything below the logo: red↔blue blur mixing and
+  //          additive light over red panels must never turn purple. The official
+  //          logo is drawn afterwards and keeps its own colours.
+  if (props.paletteGuard && !opts.skipGuard) {
+    const img = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+    guardPalette(img.data, assets.guardTable);
+    ctx.putImageData(img, 0, 0);
+    guard = true;
+  }
+
+  // --- 5d. impact flash (short, capped – logo stays readable above it) ----------------
   const flash = clamp(st.flash * props.flashIntensity, 0, props.reducedFlash ? 0.2 : 0.8);
   if (flash > 0.003) {
     ctx.fillStyle = `rgba(255,255,255,${flash})`;

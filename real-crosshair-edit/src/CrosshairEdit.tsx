@@ -76,6 +76,8 @@ export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
     if (!targetsRef.current) targetsRef.current = createTargets();
     const info = renderFrame(canvas, frame, props, assets, timeline, targetsRef.current, {
       maxSamples: props.previewMaxSamples,
+      // draft/fast preview skips the per-pixel palette guard for real-time playback
+      skipGuard: props.previewMaxSamples !== undefined && props.previewMaxSamples <= 2,
     });
     props.onFrameInfo?.(info);
     const handles = pending.current.splice(0);
