@@ -4,6 +4,7 @@ import {COMPOSITION_ID, DEFAULT_PROPS, DURATION_FRAMES, FPS, HEIGHT, WIDTH} from
 import {CrosshairEdit, type CrosshairEditProps} from './CrosshairEdit';
 import {FACTS_COMPOSITION_ID} from './facts/content';
 import {FACTS_FRAMES} from './facts/content';
+import {INSANE_COMPOSITION_ID, INSANE_FRAMES} from './insane/timeline';
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -27,6 +28,16 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={{...DEFAULT_PROPS, variant: 'facts'} as CrosshairEditProps}
+      />
+      {/* REAL: INFINITE – beat-built edit */}
+      <Composition
+        id={INSANE_COMPOSITION_ID}
+        component={CrosshairEdit}
+        durationInFrames={INSANE_FRAMES}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{...DEFAULT_PROPS, variant: 'insane'} as CrosshairEditProps}
       />
     </>
   );

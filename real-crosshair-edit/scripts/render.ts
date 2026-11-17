@@ -11,6 +11,7 @@ import {ROOT, mergeProps, runRender, runStill} from './render-core';
 import {analyzeFile} from './analyze-audio';
 import {COMPOSITION_ID, EXPORT_FILENAME, type EditProps} from '../src/config';
 import {FACTS_COMPOSITION_ID} from '../src/facts/content';
+import {INSANE_COMPOSITION_ID} from '../src/insane/timeline';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);
@@ -66,8 +67,8 @@ const main = async () => {
   const frameRange = frames ? (frames.split('-').map(Number) as [number, number]) : undefined;
   const still = opt('still');
   // --facts renders the 15 s fact-file section (composition RealCrosshairFacts) instead of the first edit
-  const compositionId = flag('facts') ? FACTS_COMPOSITION_ID : COMPOSITION_ID;
-  const defaultName = flag('facts') ? 'REAL_Facts_Section_15s.mp4' : EXPORT_FILENAME;
+  const compositionId = flag('insane') ? INSANE_COMPOSITION_ID : flag('facts') ? FACTS_COMPOSITION_ID : COMPOSITION_ID;
+  const defaultName = flag('insane') ? 'REAL_Infinite.mp4' : flag('facts') ? 'REAL_Facts_Section_15s.mp4' : EXPORT_FILENAME;
   if (still) {
     const out = opt('out') ?? path.join(ROOT, 'out', `still-${still}.png`);
     await runStill(Number(still), out, props, compositionId);

@@ -5,6 +5,8 @@ import {assetsKey, getCachedAssets, loadAssets, type Assets} from './engine/asse
 import {createTargets, renderFrame, type FrameInfo, type RenderTargets} from './engine/render';
 import {buildTimeline} from './engine/timeline';
 import {buildFactsTimeline} from './facts/timeline';
+import {buildInsaneTimeline} from './insane/timeline';
+import {renderInsane} from './insane/render';
 
 /** 'assets/x.png' → staticFile, URLs pass through. */
 export const resolveSrc = (src: string) => {
@@ -17,7 +19,7 @@ export type CrosshairEditProps = EditProps & {
   previewMaxSamples?: number;
   onFrameInfo?: (info: FrameInfo) => void;
   /** 'main' = the first 15 s edit · 'facts' = the fact-file section (its own composition) */
-  variant?: 'main' | 'facts';
+  variant?: 'main' | 'facts' | 'insane';
 };
 
 export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
@@ -65,6 +67,11 @@ export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
         : buildTimeline(props),
     [tlKey, props.variant],
   );
+  const insaneTl = useMemo(
+    () => (props.variant === 'insane' ? buildInsaneTimeline({beats: audio.beats, startOffset: audio.startOffset}) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tlKey, props.variant],
+  );
 
   useLayoutEffect(() => {
     if (assets && assets.key === key) return;
@@ -87,6 +94,12 @@ export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
     const canvas = canvasRef.current;
     if (!canvas || !assets || assets.key !== key) return;
     if (!targetsRef.current) targetsRef.current = createTargets();
+    if (insaneTl) {
+      renderInsane(canvas, frame, props, assets, insaneTl, targetsRef.current);
+      const handles = pending.current.splice(0);
+      for (const h of handles) continueRender(h);
+      return;
+    }
     const info = renderFrame(canvas, frame, props, assets, timeline, targetsRef.current, {
       maxSamples: props.previewMaxSamples,
       // draft/fast preview skips the per-pixel palette guard for real-time playback
