@@ -16,6 +16,7 @@ import dev.universe.engine.core.ui.glowPath
 import dev.universe.engine.math.*
 import dev.universe.engine.physics.*
 import dev.universe.engine.astro.*
+import dev.universe.engine.chem.*
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -169,6 +170,32 @@ object Labs {
         }) { CosmicScaleLab() },
     )
 
-    val all: List<LabDef> = math + physics + astro
+    private val chem = listOf(
+        LabDef("table", Domain.Chem, "Periodic Table", "All 118 elements, their trends, and how they melt and boil.", { t, c ->
+            for (r in 0 until 5) for (k in 0 until 7) { if (r < 2 && k in 1..5) continue; val col = listOf(UE.Red, UE.Amber, UE.Blue, UE.Blue, UE.Cyan, c, UE.Violet)[k]; drawRect(col.copy(alpha = 0.35f + 0.35f * (sin(t * 2 - k * 0.6f - r) * 0.5f + 0.5f)), at(0.06f + k * 0.128f, 0.1f + r * 0.17f), Size(size.width * 0.11f, size.height * 0.14f)) }
+        }) { PeriodicTableLab() },
+        LabDef("orbitals", Domain.Chem, "Atoms and Orbitals", "Electron clouds from the Schrödinger equation, and spectral lines.", { t, c ->
+            val pts = ArrayList<Offset>()
+            for (k in 0 until 120) { val a = k * 2.4f; val r = u * 0.42f * ((k * 0.618f) % 1f); val y = sin(a) * r * 0.45f; val x = cos(a) * r; pts += center + Offset(x * cos(t * 0.5f), y + (if (k % 2 == 0) 1 else -1) * abs(cos(a)) * u * 0.18f) }
+            drawPoints(pts, PointMode.Points, c, u * 0.035f, StrokeCap.Round)
+        }) { OrbitalsLab() },
+        LabDef("molecules", Domain.Chem, "Molecules in 3D", "VSEPR shapes, bond angles and polarity — from water to caffeine.", { t, c ->
+            val o = center; val a = t * 0.8f
+            val hs = listOf(Offset(cos(a) * 0.32f, 0.22f), Offset(-cos(a) * 0.32f, 0.22f)).map { o + it * u }
+            for (h in hs) drawLine(Color.White.copy(alpha = 0.6f), o, h, u * 0.04f, StrokeCap.Round)
+            for (h in hs) { drawCircle(Color(0xFFF2F4F8), u * 0.09f, h) }
+            drawCircle(Color(0xFFFF3D4F), u * 0.14f, o)
+        }) { MoleculesLab() },
+        LabDef("bonding", Domain.Chem, "Chemical Bonding", "Ionic, covalent, metallic: the electron tug-of-war.", { t, c ->
+            val s = 0.5f + 0.5f * sin(t)
+            drawCircle(UE.Red, u * 0.1f, at(0.25f, 0.5f)); drawCircle(c, u * 0.1f, at(0.75f, 0.5f))
+            glowDot(at(0.4f + 0.25f * s, 0.5f), Color.White, u * 0.04f)
+        }) { BondingLab() },
+        LabDef("reactions", Domain.Chem, "Reaction Kinetics", "Collision theory, catalysts and dynamic equilibrium.", { t, c ->
+            for (k in 0 until 10) { val p = at(0.15f + ((k * 0.37f + t * 0.06f * (1 + k % 3)) % 0.7f), 0.15f + ((k * 0.53f + t * 0.05f * (1 + k % 2)) % 0.7f)); drawCircle(if (k % 3 == 0) UE.Amber else if (k % 2 == 0) UE.Cyan else UE.Violet, u * 0.05f, p) }
+        }) { ReactionsLab() },
+    )
+
+    val all: List<LabDef> = math + physics + astro + chem
     val byId: Map<String, LabDef> = all.associateBy { it.id }
 }
