@@ -1,0 +1,9 @@
+node_modules/
+dist-preview/
+uploads/
+out/*
+!out/real-crosshair-silent.mp4
+public/audio/*
+!public/audio/README.md
+*.beats.json
+.DS_Store
