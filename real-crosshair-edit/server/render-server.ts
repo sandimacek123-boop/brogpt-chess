@@ -1,5 +1,5 @@
 // Preview + export server.
-//   npm run preview  → http://localhost:3000
+//   npm run preview  → http://localhost:5180
 // Serves the preview app (Vite middleware), accepts uploads (logo, artwork,
 // audio) and runs real Remotion renders with live progress (SSE).
 import http from 'node:http';
@@ -9,9 +9,9 @@ import crypto from 'node:crypto';
 import {createServer as createVite} from 'vite';
 import {makeCancelSignal} from '@remotion/renderer';
 import {ROOT, runRender} from '../scripts/render-core';
-import type {EditProps} from '../src/config';
+import {EXPORT_FILENAME, mergeProps, type EditProps} from '../src/config';
 
-const PORT = Number(process.env.PORT ?? 3000);
+const PORT = Number(process.env.PORT ?? 5180); // not 3000: Remotion's own bundle server starts there
 const UPLOADS = path.join(ROOT, 'uploads');
 const OUT = path.join(ROOT, 'out');
 fs.mkdirSync(UPLOADS, {recursive: true});
@@ -98,19 +98,21 @@ const absolutize = (props: EditProps): EditProps => {
   if (JSON.stringify(props).includes('blob:')) throw new Error('Some files were only loaded in the browser (blob:). Re-upload them while the server is running.');
   return {
     ...props,
-    logo: fix(props.logo),
+    brand: {...props.brand, logo: fix(props.brand.logo)!},
     audio: {...props.audio, src: fix(props.audio.src)},
     scenes: props.scenes.map((s) => ({...s, art: fix(s.art)!, panels: s.panels.map(fix) as typeof s.panels})),
   };
 };
 
-const startJob = (mode: 'silent' | 'music', props: EditProps, frameRange?: [number, number]): Job => {
+const startJob = (mode: 'silent' | 'music', props: EditProps, opts: {frameRange?: [number, number]; fileName?: string; crf?: number} = {}): Job => {
   const id = crypto.randomBytes(6).toString('hex');
   const {cancelSignal, cancel} = makeCancelSignal();
   const job: Job = {id, mode, stage: 'queued', progress: 0, listeners: new Set(), cancel};
   jobs.set(id, job);
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const file = `real-crosshair-${mode}-${stamp}.mp4`;
+  // requested name (sanitised), music exports get a suffix so they never overwrite the silent file
+  let base = (opts.fileName || EXPORT_FILENAME).replace(/\.mp4$/i, '').replace(/[^a-z0-9_.-]+/gi, '_').slice(0, 80) || 'REAL_Spinning_Crosshair_Final';
+  if (mode === 'music' && !/music/i.test(base)) base += '_music';
+  const file = `${base}.mp4`;
   queue = queue.then(async () => {
     if (job.stage === 'cancelled') return;
     try {
@@ -118,7 +120,8 @@ const startJob = (mode: 'silent' | 'music', props: EditProps, frameRange?: [numb
         props: absolutize(props),
         output: path.join(OUT, file),
         withAudio: mode === 'music',
-        frameRange,
+        frameRange: opts.frameRange,
+        crf: opts.crf,
         cancelSignal,
         onProgress: (p) => {
           job.stage = p.stage;
@@ -168,17 +171,22 @@ const main = async () => {
         return;
       }
       if (url.pathname === '/api/render' && req.method === 'POST') {
-        const {mode, props, frameRange} = JSON.parse((await readBody(req, 5 * 1024 * 1024)).toString()) as {
+        const body = JSON.parse((await readBody(req, 5 * 1024 * 1024)).toString()) as {
           mode: 'silent' | 'music';
-          props: EditProps;
+          props: Partial<EditProps>;
           frameRange?: [number, number]; // optional partial render (testing)
+          fileName?: string;
+          crf?: number;
         };
+        const mode = body.mode;
+        const props = mergeProps(body.props);
         if (mode === 'music' && !(props.audio?.src && props.audio.enabled)) {
           res.writeHead(400).end('Import and enable an audio track first.');
           return;
         }
         absolutize(props); // validate early
-        const job = startJob(mode === 'music' ? 'music' : 'silent', props, frameRange);
+        const crf = Number.isFinite(body.crf) ? Math.min(28, Math.max(10, Number(body.crf))) : undefined;
+        const job = startJob(mode === 'music' ? 'music' : 'silent', props, {frameRange: body.frameRange, fileName: body.fileName, crf});
         res.writeHead(200, {'content-type': 'application/json'}).end(JSON.stringify({id: job.id}));
         return;
       }

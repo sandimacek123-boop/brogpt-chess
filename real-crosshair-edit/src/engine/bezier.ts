@@ -77,10 +77,23 @@ export const makeCurve = (input: Key[]): Curve => {
     const b = keys[idx + 1];
     const T = b.f - a.f;
     if (T <= 0) return wantVel ? 0 : b.v;
-    const o = a.o ?? 0.5;
-    const i = b.i ?? 0.5;
+    let o = a.o ?? 0.5;
+    let i = b.i ?? 0.5;
     const sOut = a.s ?? 0;
     const sIn = b.sIn ?? b.s ?? 0;
+    // sanitise handles so a segment never overshoots its own end value
+    // (keeps position monotonic inside a move; overshoots are explicit keys)
+    const d = b.v - a.v;
+    if (Math.abs(d) > 1e-9) {
+      const reachOut = sOut * d > 0 ? Math.abs(sOut) * o * T : 0;
+      const reachIn = sIn * d > 0 ? Math.abs(sIn) * i * T : 0;
+      const total = reachOut + reachIn;
+      if (total > Math.abs(d) * 0.98) {
+        const k = (Math.abs(d) * 0.98) / total;
+        if (reachOut > 0) o *= k;
+        if (reachIn > 0) i *= k;
+      }
+    }
     const x1 = o * T;
     const y1 = a.v + sOut * o * T;
     const x2 = T - i * T;

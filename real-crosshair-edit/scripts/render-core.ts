@@ -6,7 +6,7 @@ import os from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {bundle} from '@remotion/bundler';
 import {renderMedia, renderStill, selectComposition, type RenderMediaOnProgress} from '@remotion/renderer';
-import {COMPOSITION_ID, DEFAULT_PROPS, type EditProps} from '../src/config';
+import {COMPOSITION_ID, mergeProps, type EditProps} from '../src/config';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -50,13 +50,7 @@ export type RenderJob = {
   cancelSignal?: Parameters<typeof renderMedia>[0]['cancelSignal'];
 };
 
-export const mergeProps = (p?: Partial<EditProps>): EditProps => ({
-  ...DEFAULT_PROPS,
-  ...p,
-  palette: {...DEFAULT_PROPS.palette, ...(p?.palette ?? {})},
-  audio: {...DEFAULT_PROPS.audio, ...(p?.audio ?? {})},
-  scenes: p?.scenes ?? DEFAULT_PROPS.scenes,
-});
+export {mergeProps};
 
 export const chromiumOptions = {gl: 'swangle' as const};
 

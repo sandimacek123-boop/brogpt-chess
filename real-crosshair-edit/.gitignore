@@ -2,7 +2,7 @@ node_modules/
 dist-preview/
 uploads/
 out/*
-!out/real-crosshair-silent.mp4
+!out/REAL_Spinning_Crosshair_Final.mp4
 public/audio/*
 !public/audio/README.md
 *.beats.json

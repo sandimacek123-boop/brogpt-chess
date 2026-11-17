@@ -1,15 +1,15 @@
 // CLI render.
-//   npm run render                                → out/real-crosshair-silent.mp4 (no audio stream)
+//   npm run render                                → out/REAL_Spinning_Crosshair_Final.mp4 (no audio stream)
 //   npm run render -- --props my-props.json       → use props exported from the preview UI
 //   npm run render:music -- --audio public/audio/montagem-mythical.mp3 [--offset 12.3] [--no-sync]
-//                                                 → out/real-crosshair-music.mp4 (+ silent version)
+//                                                 → out/REAL_Spinning_Crosshair_Final_music.mp4 (+ the no-audio version)
 //   extra: --crf 16  --concurrency 4  --frames 0-119  --out path.mp4  --still 300
 import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {ROOT, mergeProps, runRender, runStill} from './render-core';
 import {analyzeFile} from './analyze-audio';
-import type {EditProps} from '../src/config';
+import {EXPORT_FILENAME, type EditProps} from '../src/config';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);
@@ -72,9 +72,9 @@ const main = async () => {
   }
 
   const targets: Array<{out: string; withAudio: boolean}> = [];
-  const silentOut = opt('out') && !music ? path.resolve(opt('out')!) : path.join(ROOT, 'out', 'real-crosshair-silent.mp4');
+  const silentOut = opt('out') && !music ? path.resolve(opt('out')!) : path.join(ROOT, 'out', EXPORT_FILENAME);
   if (!music || !flag('skip-silent')) targets.push({out: silentOut, withAudio: false});
-  if (music) targets.push({out: opt('out') ? path.resolve(opt('out')!) : path.join(ROOT, 'out', 'real-crosshair-music.mp4'), withAudio: true});
+  if (music) targets.push({out: opt('out') ? path.resolve(opt('out')!) : path.join(ROOT, 'out', EXPORT_FILENAME.replace(/\.mp4$/, '_music.mp4')), withAudio: true});
 
   for (const t of targets) {
     const started = Date.now();

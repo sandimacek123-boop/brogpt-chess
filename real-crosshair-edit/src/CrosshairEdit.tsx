@@ -30,12 +30,28 @@ export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
     return null;
   });
 
-  const {spinSpeed, shakeIntensity, audio} = props;
-  const timeline = useMemo(
-    () => buildTimeline({spinSpeed, shakeIntensity, audio}),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [spinSpeed, shakeIntensity, audio.enabled, audio.src, audio.beatSync, audio.startOffset, JSON.stringify(audio.beats)],
-  );
+  const {audio} = props;
+  const tlKey = JSON.stringify([
+    props.spinSpeed,
+    props.spinDirection,
+    props.acceleration,
+    props.deceleration,
+    props.ringSpeed,
+    props.innerRingSpeed,
+    props.outerRingSpeed,
+    props.cameraZoom,
+    props.impactStrength,
+    props.shakeIntensity,
+    props.tickDensity,
+    props.reducedFlash,
+    audio.enabled,
+    audio.src,
+    audio.beatSync,
+    audio.startOffset,
+    audio.beats,
+  ]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const timeline = useMemo(() => buildTimeline(props), [tlKey]);
 
   useLayoutEffect(() => {
     if (assets && assets.key === key) return;

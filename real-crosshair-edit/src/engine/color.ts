@@ -1,7 +1,7 @@
-// Colour treatments.
-//  RED (normal)   : luminance → black → deep red → red → bright red → light highlight
+// Colour treatments for the panel artwork (never applied to the official logo).
+//  RED (normal)   : luminance → near-black → graphite red → deep red → impact red → highlight
 //  BLUE (inverted): luminance is INVERTED first (a real negative), then remapped
-//                   deep blue → primary → electric → light blue → white
+//                   navy → deep blue → electric blue → cyan → light cyan
 // Both are gradient maps applied per pixel to the artwork itself.
 
 import type {Palette} from '../config';
@@ -35,46 +35,68 @@ const sampleStops = (stops: Stop[], x: number): RGB => {
   return stops[stops.length - 1][1];
 };
 
-export type LUTs = {red: Uint8ClampedArray; blue: Uint8ClampedArray; key: string};
+export type LUTs = {red: Uint8ClampedArray; blue: Uint8ClampedArray; key: string; invertBlue: boolean};
 
-export const paletteKey = (p: Palette) =>
-  [p.blue, p.electric, p.lightBlue, p.white, p.red, p.deepRed, p.brightRed, p.black].join('|');
+export type LutOptions = {blueIntensity: number; redIntensity: number; invertBlue: boolean};
 
-export const buildLUTs = (p: Palette): LUTs => {
-  const black = hexToRgb(p.black);
-  const deepRed = hexToRgb(p.deepRed);
-  const red = hexToRgb(p.red);
-  const bright = hexToRgb(p.brightRed);
-  const white = hexToRgb(p.white);
-  const blue = hexToRgb(p.blue);
+export const paletteKey = (p: Palette, o?: LutOptions) =>
+  [p.electric, p.cyan, p.deepBlue, p.red, p.white, p.nearBlack, p.graphite, o?.blueIntensity, o?.redIntensity, o?.invertBlue].join('|');
+
+/** saturation control: 0 = grey, 1 = as designed, >1 = boosted */
+const intensify = (c: RGB, k: number): RGB => {
+  const y = c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
+  return [y + (c[0] - y) * k, y + (c[1] - y) * k, y + (c[2] - y) * k].map((v) => Math.max(0, Math.min(255, v))) as RGB;
+};
+
+export const buildLUTs = (p: Palette, o: LutOptions = {blueIntensity: 1, redIntensity: 1, invertBlue: true}): LUTs => {
   const electric = hexToRgb(p.electric);
-  const light = hexToRgb(p.lightBlue);
+  const cyan = hexToRgb(p.cyan);
+  const deep = hexToRgb(p.deepBlue);
+  const red = hexToRgb(p.red);
+  const white = hexToRgb(p.white);
+  const nearBlack = hexToRgb(p.nearBlack);
+  const graphite = hexToRgb(p.graphite);
 
+  // BLUE panels
+  //  inverted: x = 1 − luminance (a real negative) → navy · deep · electric · cyan · light cyan
+  //  normal:   luminance → rich blue · electric · cyan · white (dark artwork becomes an electric-blue field)
+  const blueStops: Stop[] = (
+    o.invertBlue
+      ? [
+          [0, mix(deep, nearBlack, 0.55)],
+          [0.3, deep],
+          [0.6, electric],
+          [0.85, cyan],
+          [1, mix(cyan, white, 0.45)],
+        ]
+      : [
+          [0, mix(electric, deep, 0.45)],
+          [0.4, electric],
+          [0.72, cyan],
+          [0.9, mix(cyan, white, 0.55)],
+          [1, white],
+        ]
+  ).map(([x, c]) => [x as number, intensify(c as RGB, o.blueIntensity)]);
+  // RED panels: luminance → near-black · graphite-red · deep red · impact red · hot highlight
   const redStops: Stop[] = [
-    [0, black],
-    [0.42, deepRed],
-    [0.72, red],
-    [0.9, bright],
-    [1, mix(bright, white, 0.4)],
-  ];
-  // v = 1 - luminance  (the inversion)
-  const blueStops: Stop[] = [
-    [0, mix(blue, [0, 0, 0], 0.35)],
-    [0.25, blue],
-    [0.5, electric],
-    [0.75, light],
-    [1, white],
-  ];
+    [0, nearBlack],
+    [0.3, mix(graphite, red, 0.14)],
+    [0.6, mix(red, nearBlack, 0.38)],
+    [0.8, red],
+    [0.93, mix(red, white, 0.35)],
+    [1, mix(red, white, 0.7)],
+  ].map(([x, c]) => [x as number, intensify(c as RGB, o.redIntensity)]);
+
   const r = new Uint8ClampedArray(256 * 3);
   const b = new Uint8ClampedArray(256 * 3);
   for (let i = 0; i < 256; i++) {
     const L = i / 255;
     const cr = sampleStops(redStops, L);
-    const cb = sampleStops(blueStops, 1 - L);
+    const cb = sampleStops(blueStops, o.invertBlue ? 1 - L : L);
     r.set([Math.round(cr[0]), Math.round(cr[1]), Math.round(cr[2])], i * 3);
     b.set([Math.round(cb[0]), Math.round(cb[1]), Math.round(cb[2])], i * 3);
   }
-  return {red: r, blue: b, key: paletteKey(p)};
+  return {red: r, blue: b, key: paletteKey(p, o), invertBlue: o.invertBlue};
 };
 
 export const lutColor = (luts: LUTs, which: Treatment, L: number) => {
@@ -110,10 +132,7 @@ const hueOf = ([r, g, b]: RGB) => {
 
 /** 360-entry table: how much to desaturate a pixel of a given hue (0 = keep, 1 = neutral). */
 export const buildGuardTable = (p: Palette) => {
-  const families = [
-    [p.blue, p.electric, p.lightBlue],
-    [p.red, p.deepRed, p.brightRed],
-  ];
+  const families = [[p.electric, p.cyan, p.deepBlue], [p.red]];
   const bands: Array<[number, number]> = [];
   for (const fam of families) {
     const hues = fam.map((c) => hueOf(hexToRgb(c))).filter((h): h is number => h !== null);
