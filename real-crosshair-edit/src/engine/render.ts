@@ -552,5 +552,8 @@ export const renderFrame = (
   drawBrand(ctx, assets.logoIcon, props.brand, pal, st.logo, lay);
   drawLinks(ctx, props.brand, pal, st.logo, lay);
 
+  // --- 7. optional overlay (fact file text, grain, fades) – only present in the facts section
+  if (st.overlay) st.overlay(ctx, {logoIcon: assets.logoIcon, frame});
+
   return {samples, ringCopies, ca: doCA, guard, state: st};
 };

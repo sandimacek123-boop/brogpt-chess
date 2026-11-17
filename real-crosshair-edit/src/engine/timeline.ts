@@ -210,7 +210,11 @@ export type FrameState = {
   bgWave: number;
   logo: LogoState;
   collapse: number; // outro geometric collapse 0..1
+  /** optional screen-space layer drawn after the brand layer (used by the fact file) */
+  overlay?: (ctx: CanvasRenderingContext2D, extra: OverlayExtra) => void;
 };
+
+export type OverlayExtra = {logoIcon: HTMLCanvasElement; frame: number};
 
 // --- deterministic smooth noise for camera shake ---------------------------------
 const noise1 = (t: number, seed: number) =>

@@ -9,7 +9,8 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {ROOT, mergeProps, runRender, runStill} from './render-core';
 import {analyzeFile} from './analyze-audio';
-import {EXPORT_FILENAME, type EditProps} from '../src/config';
+import {COMPOSITION_ID, EXPORT_FILENAME, type EditProps} from '../src/config';
+import {FACTS_COMPOSITION_ID} from '../src/facts/content';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);
@@ -64,15 +65,18 @@ const main = async () => {
   const frames = opt('frames');
   const frameRange = frames ? (frames.split('-').map(Number) as [number, number]) : undefined;
   const still = opt('still');
+  // --facts renders the 15 s fact-file section (composition RealCrosshairFacts) instead of the first edit
+  const compositionId = flag('facts') ? FACTS_COMPOSITION_ID : COMPOSITION_ID;
+  const defaultName = flag('facts') ? 'REAL_Facts_Section_15s.mp4' : EXPORT_FILENAME;
   if (still) {
     const out = opt('out') ?? path.join(ROOT, 'out', `still-${still}.png`);
-    await runStill(Number(still), out, props);
+    await runStill(Number(still), out, props, compositionId);
     console.log(`still → ${out}`);
     return;
   }
 
   const targets: Array<{out: string; withAudio: boolean}> = [];
-  const silentOut = opt('out') && !music ? path.resolve(opt('out')!) : path.join(ROOT, 'out', EXPORT_FILENAME);
+  const silentOut = opt('out') && !music ? path.resolve(opt('out')!) : path.join(ROOT, 'out', defaultName);
   if (!music || !flag('skip-silent')) targets.push({out: silentOut, withAudio: false});
   if (music) targets.push({out: opt('out') ? path.resolve(opt('out')!) : path.join(ROOT, 'out', EXPORT_FILENAME.replace(/\.mp4$/, '_music.mp4')), withAudio: true});
 
@@ -81,6 +85,7 @@ const main = async () => {
     let last = -1;
     await runRender({
       props,
+      compositionId,
       output: t.out,
       withAudio: t.withAudio,
       crf: opt('crf') ? Number(opt('crf')) : undefined,

@@ -40,6 +40,8 @@ export const getBundle = (onProgress?: (p: number) => void) => {
 
 export type RenderJob = {
   props?: Partial<EditProps>;
+  /** Remotion composition id: COMPOSITION_ID (first edit) or the facts composition */
+  compositionId?: string;
   output: string;
   /** include the music track (only if props.audio.src is set + enabled) */
   withAudio: boolean;
@@ -63,7 +65,7 @@ export const runRender = async (job: RenderJob) => {
   job.onProgress?.({stage: 'bundling', progress: 0});
   const serveUrl = await getBundle((p) => job.onProgress?.({stage: 'bundling', progress: p}));
   const browserExecutable = findBrowser();
-  const composition = await selectComposition({serveUrl, id: COMPOSITION_ID, inputProps, browserExecutable, chromiumOptions});
+  const composition = await selectComposition({serveUrl, id: job.compositionId ?? COMPOSITION_ID, inputProps, browserExecutable, chromiumOptions});
 
   fs.mkdirSync(path.dirname(job.output), {recursive: true});
   const onProgress: RenderMediaOnProgress = ({progress, renderedFrames, encodedFrames, stitchStage}) => {
@@ -96,11 +98,11 @@ export const runRender = async (job: RenderJob) => {
   return job.output;
 };
 
-export const runStill = async (frame: number, output: string, props?: Partial<EditProps>) => {
+export const runStill = async (frame: number, output: string, props?: Partial<EditProps>, compositionId: string = COMPOSITION_ID) => {
   const inputProps = mergeProps(props);
   const serveUrl = await getBundle();
   const browserExecutable = findBrowser();
-  const composition = await selectComposition({serveUrl, id: COMPOSITION_ID, inputProps, browserExecutable, chromiumOptions});
+  const composition = await selectComposition({serveUrl, id: compositionId, inputProps, browserExecutable, chromiumOptions});
   await renderStill({composition, serveUrl, output, frame, inputProps, imageFormat: 'png', browserExecutable, chromiumOptions});
   return output;
 };

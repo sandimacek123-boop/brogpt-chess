@@ -4,6 +4,7 @@ import {FPS, HEIGHT, WIDTH, type EditProps} from './config';
 import {assetsKey, getCachedAssets, loadAssets, type Assets} from './engine/assets';
 import {createTargets, renderFrame, type FrameInfo, type RenderTargets} from './engine/render';
 import {buildTimeline} from './engine/timeline';
+import {buildFactsTimeline} from './facts/timeline';
 
 /** 'assets/x.png' → staticFile, URLs pass through. */
 export const resolveSrc = (src: string) => {
@@ -15,6 +16,8 @@ export type CrosshairEditProps = EditProps & {
   /** preview-only: cap motion-blur sub-frames for real-time playback */
   previewMaxSamples?: number;
   onFrameInfo?: (info: FrameInfo) => void;
+  /** 'main' = the first 15 s edit · 'facts' = the fact-file section (its own composition) */
+  variant?: 'main' | 'facts';
 };
 
 export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
@@ -51,7 +54,7 @@ export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
     audio.beats,
   ]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const timeline = useMemo(() => buildTimeline(props), [tlKey]);
+  const timeline = useMemo(() => (props.variant === 'facts' ? buildFactsTimeline() : buildTimeline(props)), [tlKey, props.variant]);
 
   useLayoutEffect(() => {
     if (assets && assets.key === key) return;
