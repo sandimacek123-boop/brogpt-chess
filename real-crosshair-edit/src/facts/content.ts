@@ -1,12 +1,15 @@
-// Fact file for the second 15 seconds. Every line is taken from the official
-// Project Real site (projectreal.gg) as checked on 2026-11-17. Nothing here is
-// a claim that was not published there.
+// Fact file for the second 15 seconds. The facts come from the owner's info
+// (the Real Discord), as provided by the project owner on 2026-11-17. The
+// website projectreal.gg is NOT the source for these lines; it is shown only
+// where the owner asked for it (the outro links).
 
 import type {SceneId} from '../config';
 
 export const BEAT_FRAMES = 90; // 1.5 s per beat at 60 fps
 export const FACTS_FRAMES = 900; // 15 s
 export const FACTS_COMPOSITION_ID = 'RealCrosshairFacts';
+
+export const SOURCE_LABEL = 'Real Discord';
 
 export type FactBeat = {
   kind?: 'card' | 'end';
@@ -20,71 +23,67 @@ export type FactBeat = {
 
 export const FACT_BEATS: FactBeat[] = [
   {
-    label: '01 · PUBLIC RELEASE',
-    head: () => ['MAY 15, 2026'],
-    sub: 'Real went public on this date. The first research started in 2024.',
-    src: 'projectreal.gg/en/about',
+    label: '01 · RELEASE',
+    head: () => ['MAY 13, 2026'],
+    sub: 'Real released on this date.',
+    src: SOURCE_LABEL,
     scene: 'D',
   },
   {
-    label: '02 · COMMUNITY',
-    head: (e) => [`${Math.round(327 * e)}K+`],
-    sub: 'community members, as listed on the official About page.',
-    src: 'projectreal.gg/en/about',
+    label: '02 · DETECTION',
+    head: () => ['UNDETECTED'],
+    sub: 'Real is undetected.',
+    src: SOURCE_LABEL,
     scene: 'A',
   },
   {
-    label: '03 · COMPATIBILITY',
-    head: (e) => [`sUNC ${Math.round(100 * e)}%`],
-    sub: 'Real column of the official comparison table.',
-    src: 'projectreal.gg · comparison',
+    label: '03 · SCORE',
+    head: (e) => [`MYRIAD ${Math.round(99 * e)}`],
+    sub: 'Myriad score 99.',
+    src: SOURCE_LABEL,
     scene: 'C',
-    bars: [
-      {label: 'sUNC', value: 1.0, shown: '100%'},
-      {label: 'UNC', value: 0.99, shown: '99%'},
-    ],
   },
   {
-    label: '04 · FREE PLAN',
-    head: () => ['$0'],
-    sub: 'A new 24-hour key every 23 hours. Full access on one device.',
-    src: 'projectreal.gg/en/pricing',
+    label: '04 · COMPATIBILITY',
+    head: (e) => [`UNC ${Math.round(100 * e)}`, `sUNC ${Math.round(100 * e)}`],
+    sub: 'UNC 100 and sUNC 100.',
+    src: SOURCE_LABEL,
     scene: 'D',
   },
   {
-    label: '05 · PLUS KEY',
+    label: '05 · KEY SYSTEM',
+    head: () => ['ONLY 1', 'KEY SYSTEM'],
+    sub: 'One key system, no more.',
+    src: SOURCE_LABEL,
+    scene: 'C',
+  },
+  {
+    label: '06 · PRICE',
     head: (e) => [`$${(2.99 * e).toFixed(2)}`],
-    sub: '7 days, no ad-steps. Redeemed with a key, not a subscription.',
-    src: 'projectreal.gg/en/pricing',
+    sub: 'Keys cost $2.99.',
+    src: SOURCE_LABEL,
     scene: 'A',
   },
   {
-    label: '06 · HOW IT WORKS',
-    head: () => ['KEYS, NOT', 'SUBSCRIPTIONS'],
-    sub: 'Plus and Pro keys come only from verified resellers.',
-    src: 'projectreal.gg/en/pricing#redeem',
-    scene: 'C',
-  },
-  {
-    label: '07 · INJECTION',
-    head: () => ['UNDER 5 SEC'],
-    sub: 'Scripts that run with under 5 s injection speed, per the official homepage.',
-    src: 'projectreal.gg',
+    label: '07 · PAYMENT',
+    head: () => ['CRYPTO', 'ACCEPTED'],
+    sub: 'Crypto payments are supported.',
+    src: SOURCE_LABEL,
     scene: 'D',
   },
   {
-    label: '08 · WORKSPACE',
-    head: () => ['EXECUTOR', '+ SCRIPTHUB'],
-    sub: 'Cloud scripts, account tools and theme presets in one app.',
-    src: 'projectreal.gg/en/about',
-    scene: 'A',
+    label: '08 · STATUS',
+    head: () => ['weao.xyz'],
+    sub: 'Listed on weao.xyz.',
+    src: SOURCE_LABEL,
+    scene: 'C',
   },
   {
-    label: '09 · OFFICIAL DOMAINS',
-    head: () => ['projectreal.gg'],
-    sub: 'Also listed: projectreal.live · projectreal.net · realest.gg',
-    src: 'projectreal.gg (footer)',
-    scene: 'C',
+    label: '09 · OWNERS',
+    head: () => ['MARKO · BYTECODE', '0xD · DADDY MARKO'],
+    sub: 'The owners of Real.',
+    src: SOURCE_LABEL,
+    scene: 'A',
   },
   {
     kind: 'end',

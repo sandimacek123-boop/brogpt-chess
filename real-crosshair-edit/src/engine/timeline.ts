@@ -285,14 +285,14 @@ const mapRotKeys = (keys: Key[], m: (t: number) => number, p: Partial<TimelineIn
 const mapTimes = (keys: Key[], m: (t: number) => number): Key[] => keys.map((k) => ({...k, f: m(k.f)}));
 
 // --- beat warp -------------------------------------------------------------------
-const makeBeatWarp = (anchors: number[], beatsSec: number[], startOffset: number) => {
+export const makeBeatWarp = (anchors: number[], beatsSec: number[], startOffset: number, tol = 16) => {
   const beatFrames = beatsSec
     .map((b) => (b - startOffset) * FPS)
     .filter((b) => b > 4 && b < DURATION_FRAMES - 4)
     .sort((a, b) => a - b);
   if (beatFrames.length === 0) return (f: number) => f;
   const pairs: Array<[number, number]> = [[0, 0]];
-  const TOL = 16; // ≈ half a beat at 112 BPM
+  const TOL = tol; // max distance (frames) for an impact to snap to a beat
   for (const a of [...anchors].sort((x, y) => x - y)) {
     let best = -1;
     let bestD = Infinity;

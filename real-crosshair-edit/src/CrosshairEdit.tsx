@@ -54,7 +54,17 @@ export const CrosshairEdit: React.FC<CrosshairEditProps> = (props) => {
     audio.beats,
   ]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const timeline = useMemo(() => (props.variant === 'facts' ? buildFactsTimeline() : buildTimeline(props)), [tlKey, props.variant]);
+  const timeline = useMemo(
+    () =>
+      props.variant === 'facts'
+        ? buildFactsTimeline({
+            beats: audio.beats,
+            startOffset: audio.startOffset,
+            beatSync: Boolean(audio.beatSync && audio.enabled && audio.src),
+          })
+        : buildTimeline(props),
+    [tlKey, props.variant],
+  );
 
   useLayoutEffect(() => {
     if (assets && assets.key === key) return;
