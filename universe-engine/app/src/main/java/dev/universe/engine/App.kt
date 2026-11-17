@@ -73,6 +73,8 @@ class AppState(initial: Prefs = Prefs(), private val persist: (Prefs) -> Unit = 
     var prefs by mutableStateOf(initial)
         private set
     var discovery by mutableStateOf<Secret?>(null)
+    /** Boot animation; shown once per process, never in tests. */
+    var showIntro by mutableStateOf(false)
 
     fun load(p: Prefs) { prefs = p }
     fun update(f: (Prefs) -> Prefs) {
@@ -123,6 +125,7 @@ fun UniverseApp(app: AppState, nav: Nav) {
                 }
             }
             DiscoveryOverlay(app)
+            if (app.showIntro) dev.universe.engine.home.Intro { app.showIntro = false }
         }
     }
 }

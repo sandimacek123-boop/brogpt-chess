@@ -25,13 +25,14 @@ import kotlinx.coroutines.launch
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val store = SettingsStore(application)
     val nav = Nav()
-    val app = AppState { p -> viewModelScope.launch { store.save(p) } }
+    val app = AppState { p -> viewModelScope.launch { store.save(p) } }.also { it.showIntro = true }
     var ready by mutableStateOf(false)
         private set
 
     init {
         viewModelScope.launch {
             app.load(runCatching { store.prefs.first() }.getOrDefault(app.prefs))
+            if (app.prefs.reduceMotion) app.showIntro = false
             ready = true
         }
     }
