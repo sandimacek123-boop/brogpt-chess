@@ -863,6 +863,7 @@ export class Renderer2D {
   // ------------------------------------------------------------------ overlays
   /** Draw a single element's shape with a given style (used for highlights). */
   private overlay(ctx: Ctx, view: RenderView, g: Geo, opt: RenderOptions, indices: number[], color: string, alpha: number) {
+    // (indices may be thinned below for very large overlays)
     if (!indices.length || alpha <= 0) return;
     const viz = opt.viz;
     const n = view.n;
@@ -872,11 +873,18 @@ export class Renderer2D {
       // markers for path-based / sampled modes
       ctx.fillStyle = color;
       ctx.beginPath();
+      // one marker per device-pixel column (never one per element): O(min(k, width))
+      const span = viz === 'strips' ? g.h : g.w;
+      const cols = Math.max(1, Math.floor(span));
+      const seenCol = new Uint8Array(cols + 1);
+      const mw = Math.max(2 * g.dpr, span / n);
       for (const i of indices) {
-        const px = g.x + ((i + 0.5) / n) * g.w;
-        const mw = Math.max(2 * g.dpr, g.w / n);
-        if (viz === 'strips') ctx.rect(g.x, g.y + (i / n) * g.h, g.w, Math.max(2 * g.dpr, g.h / n));
-        else ctx.rect(px - mw / 2, g.y, mw, g.h);
+        const c = Math.min(cols, Math.floor((i / n) * cols));
+        if (seenCol[c]) continue;
+        seenCol[c] = 1;
+        const p = ((i + 0.5) / n) * span;
+        if (viz === 'strips') ctx.rect(g.x, g.y + p - mw / 2, g.w, mw);
+        else ctx.rect(g.x + p - mw / 2, g.y, mw, g.h);
       }
       ctx.globalAlpha = alpha * 0.45;
       ctx.fill();
@@ -885,6 +893,7 @@ export class Renderer2D {
     }
     const stroke = viz === 'circular-bars' || viz === 'spikes';
     const shape = this.shapeFn(viz, view, g, opt);
+    if (indices.length > 6000) indices = indices.filter((_, k) => k % Math.ceil(indices.length / 6000) === 0);
     ctx.beginPath();
     const seen = new Set<number>();
     for (const i of indices) {

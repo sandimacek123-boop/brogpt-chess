@@ -19,10 +19,23 @@
     "electron:dev": "npm run build && npm run electron:compile && electron .",
     "electron:start": "npm run electron:compile && electron .",
     "icons": "node scripts/make-icons.mjs",
-    "dist:win": "npm run build && npm run electron:compile && electron-builder --win nsis portable --x64",
+    "dist:win": "npm run build && npm run electron:compile && electron-builder --win nsis portable --x64 --publish never",
     "dist:linux": "npm run build && npm run electron:compile && electron-builder --linux dir"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^22.20.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.170.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/theme-one-dark": "^6.1.3",
     "@fontsource-variable/inter": "^5.3.0",
@@ -37,18 +50,69 @@
     "zod": "^3.23.8",
     "zustand": "^4.5.5"
   },
-  "devDependencies": {
-    "@playwright/test": "^1.65.1",
-    "@types/node": "^22.20.5",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@types/three": "^0.170.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8",
-    "esbuild": "^0.24.0",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.11",
-    "vitest": "^2.1.8"
+  "homepage": "https://github.com/sandimacek123-boop/brogpt-chess",
+  "build": {
+    "appId": "com.sortclaude.app",
+    "productName": "SortClaude 5.5",
+    "copyright": "Copyright © 2026 SortClaude Team",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "build/icon.ico",
+      "build/icon.png",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "legalTrademarks": "SortClaude",
+      "executableName": "SortClaude"
+    },
+    "nsis": {
+      "artifactName": "SortClaude-5.5-Setup.exe",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SortClaude 5.5",
+      "uninstallDisplayName": "SortClaude 5.5",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "SortClaude-5.5-Portable.exe"
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "icon": "build/icon.png",
+      "category": "Education"
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sandimacek123-boop/brogpt-chess.git"
   }
 }

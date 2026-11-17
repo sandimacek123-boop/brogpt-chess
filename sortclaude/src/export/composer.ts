@@ -151,7 +151,7 @@ export class Composer {
     const portrait = H0 > W;
     // multi-panel layouts reserve a title band so the title never covers panel labels
     const t = this.project.text;
-    const band = layout !== 'single' && t.showTitle && t.position !== 'center' ? Math.round(Math.min(W, H0) * 0.06 * t.titleSize * 1.5) : 0;
+    const band = t.showTitle && t.position !== 'center' ? Math.round(Math.min(W, H0) * 0.06 * t.titleSize * 1.5) : 0;
     const y0 = t.position === 'top' ? band : 0;
     const H = H0 - band;
     const grid = (cols: number, rows: number) => {
@@ -402,7 +402,7 @@ export class Composer {
     const multi = LAYOUT_PANELS[clip.layout] > 1;
     const fs = Math.round(base * 0.06 * s.titleSize);
     const band = Math.round(base * 0.06 * s.titleSize * 1.5);
-    const y = multi ? (s.position === 'top' ? band * 0.68 : s.position === 'bottom' ? H - band * 0.32 : H * 0.46) : s.position === 'top' ? H * 0.1 : s.position === 'center' ? H * 0.46 : H * 0.84;
+    const y = s.position === 'top' ? band * 0.68 : s.position === 'bottom' ? H - band * 0.32 : H * 0.46;
     const appear = loc.phase === 'intro' ? Math.min(1, t / Math.max(0.3, p.intro * 0.8)) : Math.min(1, local / 0.9);
     ctx.save();
     ctx.textAlign = 'center';
