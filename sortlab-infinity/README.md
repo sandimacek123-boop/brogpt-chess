@@ -1,6 +1,6 @@
 # SortLab Infinity
 
-A high-performance sorting algorithm visualizer: **103 tested algorithms** (including GrailSort, WikiSort and full TimSort), **20 visualization modes** (including two WebGL 3D modes), synthesized sound, an 8-lane algorithm battle mode and WebM/MP4 video export. Runs in any browser and as an **Android app (APK)**.
+A high-performance sorting algorithm visualizer: **103 tested algorithms** (including GrailSort, WikiSort and full TimSort), **20 visualization modes** (including two WebGL 3D modes), synthesized sound, an 8-lane algorithm battle mode and WebM/MP4 video export.
 
 Built with React 19, TypeScript, Vite, Tailwind CSS 4, Canvas 2D, Three.js (lazy-loaded), the Web Audio API and Web Workers.
 

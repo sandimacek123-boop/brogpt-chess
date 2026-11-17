@@ -1,0 +1,10 @@
+{
+	"appId": "com.sortlab.infinity",
+	"appName": "SortLab Infinity",
+	"webDir": "dist",
+	"backgroundColor": "#050507",
+	"android": {
+		"backgroundColor": "#050507",
+		"adjustMarginsForEdgeToEdge": "auto"
+	}
+}

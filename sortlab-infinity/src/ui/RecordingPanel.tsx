@@ -6,7 +6,6 @@ import { useSettings } from '../state/SettingsContext';
 import { getAlgorithm } from '../algorithms';
 import { Button, Card, Field, Select, Toggle } from './controls';
 import { IconDownload, IconRecord, IconStop } from './icons';
-import { isNative, saveAndShareNative } from '../native';
 
 type RecState = 'idle' | 'recording' | 'finalizing';
 
@@ -159,19 +158,6 @@ export default function RecordingPanel({ controller, status, bare }: { controlle
       {video && state === 'idle' && (
         <div className="mt-4 flex flex-col gap-3">
           <video src={video.url} controls playsInline className="max-h-64 w-full rounded-xl border border-white/10 bg-black" />
-          {isNative() ? (
-            <Button
-              variant="primary"
-              onClick={() => {
-                setSaveMsg('Preparing…');
-                saveAndShareNative(video.blob, video.name)
-                  .then(() => setSaveMsg(null))
-                  .catch((e: Error) => setSaveMsg(`Could not share: ${e.message}`));
-              }}
-            >
-              <IconDownload /> Save / share {video.name} ({(video.size / 1048576).toFixed(1)} MB)
-            </Button>
-          ) : (
             <a
               href={video.url}
               download={video.name}
@@ -179,7 +165,6 @@ export default function RecordingPanel({ controller, status, bare }: { controlle
             >
               <IconDownload /> Download {video.name} ({(video.size / 1048576).toFixed(1)} MB)
             </a>
-          )}
           {saveMsg && <p className="text-xs text-ink-300">{saveMsg}</p>}
         </div>
       )}
