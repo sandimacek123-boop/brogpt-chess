@@ -14,6 +14,7 @@ import dev.universe.engine.core.ui.UE
 import dev.universe.engine.core.ui.glowDot
 import dev.universe.engine.core.ui.glowPath
 import dev.universe.engine.math.*
+import dev.universe.engine.physics.*
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -93,6 +94,48 @@ object Labs {
         }) { TransformsLab() },
     )
 
-    val all: List<LabDef> = math
+    private val physics = listOf(
+        LabDef("orbits", Domain.Physics, "Gravity Sandbox", "N-body orbits, slingshots and three-body chaos.", { t, c ->
+            drawCircle(UE.Amber, u * 0.09f, center); drawCircle(UE.Amber.copy(alpha = 0.25f), u * 0.17f, center)
+            for (k in 0 until 2) { val r = u * (0.25f + k * 0.17f); drawCircle(c.copy(alpha = 0.3f), r, center, style = Stroke(1.2f)); val a = t * (1.6f - k * 0.7f) + k * 2; glowDot(center + Offset(cos(a) * r, sin(a) * r), if (k == 0) c else UE.Cyan, u * 0.04f) }
+        }) { OrbitsLab() },
+        LabDef("blackhole", Domain.Physics, "Black Hole", "Real light paths and a ray-traced accretion disc.", { t, c ->
+            rotate(-18f, center) { drawOval(UE.Amber.copy(alpha = 0.85f), Offset(center.x - u * 0.46f, center.y - u * 0.1f), Size(u * 0.92f, u * 0.2f), style = Stroke(u * 0.05f)) }
+            drawCircle(Color.Black, u * 0.2f, center); drawCircle(UE.Amber.copy(alpha = 0.7f + 0.3f * sin(t * 2)), u * 0.21f, center, style = Stroke(u * 0.025f))
+            drawArc(c, 200f, 140f, false, Offset(center.x - u * 0.27f, center.y - u * 0.27f), Size(u * 0.54f, u * 0.54f), style = Stroke(u * 0.03f))
+        }) { BlackHoleLab() },
+        LabDef("collisions", Domain.Physics, "Collisions and Gases", "Momentum, Maxwell–Boltzmann, and π from colliding blocks.", { t, c ->
+            for (k in 0 until 9) { val a = k * 2.1f + t * (0.7f + k * 0.13f); val p = center + Offset(cos(a) * u * (0.12f + 0.033f * k), sin(a * 1.3f) * u * (0.1f + 0.03f * k)); glowDot(p, if (k % 3 == 0) UE.Amber else c, u * 0.04f) }
+            drawRect(c.copy(alpha = 0.5f), Offset(size.width * 0.06f, size.height * 0.06f), Size(size.width * 0.88f, size.height * 0.88f), style = Stroke(1.5f))
+        }) { CollisionsLab() },
+        LabDef("pendulum", Domain.Physics, "Pendulums and Oscillations", "Large swings, chaos, pendulum waves and resonance.", { t, c ->
+            val p = at(0.5f, 0.1f); val a = 0.9f * sin(t * 1.4f); val b = 1.6f * sin(t * 2.1f + 1f)
+            val p1 = p + Offset(sin(a), cos(a)) * (u * 0.36f); val p2 = p1 + Offset(sin(b), cos(b)) * (u * 0.36f)
+            drawLine(Color.White, p, p1, 1.5f); drawLine(Color.White, p1, p2, 1.5f); drawCircle(c, u * 0.04f, p1); glowDot(p2, UE.Magenta, u * 0.045f)
+        }) { PendulumLab() },
+        LabDef("waves", Domain.Physics, "Wave Interference", "A live ripple tank: slits, diffraction, refraction.", { t, c ->
+            for (src in listOf(at(0.3f, 0.3f), at(0.7f, 0.3f))) for (k in 0 until 5) { val r = ((t * 0.25f + k / 5f) % 1f) * u * 0.8f; drawCircle(c.copy(alpha = (1 - r / (u * 0.8f)) * 0.7f), r, src, style = Stroke(1.5f)) }
+        }) { WavesLab() },
+        LabDef("fields", Domain.Physics, "Electromagnetic Fields", "Field lines, potentials and charges spiralling in B.", { t, c ->
+            val a = at(0.3f, 0.5f); val b = at(0.7f, 0.5f)
+            for (k in -3..3) { val p = Path(); p.moveTo(a.x, a.y); p.quadraticTo(center.x, center.y + k * u * 0.13f + 0.02f * u * sin(t), b.x, b.y); drawPath(p, Color.White.copy(alpha = 0.5f), style = Stroke(1.2f)) }
+            glowDot(a, UE.Magenta, u * 0.06f); glowDot(b, c, u * 0.06f)
+        }) { FieldsLab() },
+        LabDef("fluid", Domain.Physics, "Particle Fluid", "Hundreds of particles become a liquid you can pour.", { t, c ->
+            val pts = ArrayList<Offset>()
+            for (k in 0 until 60) { val x = (k % 12) / 11f; val row = k / 12; pts += at(0.08f + 0.84f * x, 0.92f - row * 0.1f - 0.08f * sin(x * 5f - t * 2.5f) * (row + 1) / 5f) }
+            drawPoints(pts, PointMode.Points, c, u * 0.07f, StrokeCap.Round)
+        }) { FluidLab() },
+        LabDef("projectile", Domain.Physics, "Projectile Motion", "Parabolas, air drag and the best angle on six worlds.", { t, c ->
+            curve(c.copy(alpha = 0.7f), 30, 0.03f, false) { x -> at(0.08f + 0.84f * x, 0.88f - 3.1f * x * (1 - x) * 0.85f) }
+            val x = (t * 0.35f) % 1f; glowDot(at(0.08f + 0.84f * x, 0.88f - 3.1f * x * (1 - x) * 0.85f), Color.White, u * 0.05f)
+        }) { ProjectileLab() },
+        LabDef("energy", Domain.Physics, "Energy Skate Park", "Kinetic, potential and heat on a track you shape.", { t, c ->
+            curve(c, 40, 0.035f) { x -> at(0.06f + 0.88f * x, 0.25f + 0.6f * (1 - (2 * x - 1) * (2 * x - 1))) }
+            val x = 0.5f + 0.42f * sin(t * 1.3f); glowDot(at(0.06f + 0.88f * x, 0.2f + 0.6f * (1 - (2 * x - 1) * (2 * x - 1))), Color.White, u * 0.05f)
+        }) { EnergyLab() },
+    )
+
+    val all: List<LabDef> = math + physics
     val byId: Map<String, LabDef> = all.associateBy { it.id }
 }
