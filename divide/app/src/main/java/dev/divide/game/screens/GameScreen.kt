@@ -86,6 +86,9 @@ class RunResult(
     val biggest: Long, val fact: String,
 )
 
+/** The running engine, exposed for instrumentation-style tests. */
+object GameDebug { var engine: Engine? = null; var look: Look? = null }
+
 private class Ptr(val swipe: Int, var x: Float, var y: Float, var ms: Long, val trail: Trail) { var speed = 0f }
 
 fun divisorCount(n: Long): Int = NT.factorize(n).groupingBy { it }.eachCount().values.fold(1) { a, k -> a * (k + 1) }
@@ -147,6 +150,7 @@ fun GameScreen(app: AppState, mode: Mode, onRetry: () -> Unit, onExit: () -> Uni
         }
     }
     val look = remember { Look() }
+    GameDebug.engine = engine; GameDebug.look = look
     look.blade = save.blade; look.reduceFlash = save.reduceFlash; look.hints = save.hints
     val trails = remember { ArrayList<Trail>() }
     look.trails = trails
@@ -207,6 +211,20 @@ fun GameScreen(app: AppState, mode: Mode, onRetry: () -> Unit, onExit: () -> Uni
                     val ptrs = HashMap<Long, Ptr>()
                     var nextSwipe = 1
                     var lastWhoosh = 0L
+                    // one stroke segment: speed from the pointer's own timestamps, cut along the whole segment
+                    fun segment(p: Ptr, wx: Float, wy: Float, ms: Long) {
+                        val d = hypot(wx - p.x, wy - p.y)
+                        if (d < 0.5f) return
+                        val dtMs = (ms - p.ms).coerceAtLeast(4L)
+                        val inst = d / (dtMs / 1000f)
+                        p.speed = if (p.speed == 0f) inst else p.speed * 0.35f + inst * 0.65f
+                        if (!paused && result == null) engine.swipe(p.x, p.y, wx, wy, p.swipe, p.speed)
+                        val cutting = p.speed >= Engine.CUT_SPEED
+                        if (cutting && !p.trail.cutting && ms - lastWhoosh > 140) { app.sound.play("slice_lo", 0.3f, 1.4f); lastWhoosh = ms }
+                        p.trail.cutting = cutting
+                        p.trail.add(wx, wy, clock())
+                        p.x = wx; p.y = wy; p.ms = ms
+                    }
                     awaitPointerEventScope {
                         while (true) {
                             val ev = awaitPointerEvent()
@@ -221,19 +239,12 @@ fun GameScreen(app: AppState, mode: Mode, onRetry: () -> Unit, onExit: () -> Uni
                                     if (wy > engine.groundY + 8f) engine.activateOverdrive() else engine.tap(wx, wy)
                                 } else if (ch.pressed) {
                                     val p = ptrs[id] ?: continue
-                                    val d = hypot(wx - p.x, wy - p.y)
-                                    if (d < 0.5f) continue
-                                    val dtMs = (ch.uptimeMillis - p.ms).coerceAtLeast(4L)
-                                    val inst = d / (dtMs / 1000f)
-                                    p.speed = if (p.speed == 0f) inst else p.speed * 0.35f + inst * 0.65f
-                                    if (!paused && result == null) engine.swipe(p.x, p.y, wx, wy, p.swipe, p.speed)
-                                    val cutting = p.speed >= Engine.CUT_SPEED
-                                    if (cutting && !p.trail.cutting && ch.uptimeMillis - lastWhoosh > 140) { app.sound.play("slice_lo", 0.3f, 1.4f); lastWhoosh = ch.uptimeMillis }
-                                    p.trail.cutting = cutting
-                                    p.trail.add(wx, wy, clock())
-                                    p.x = wx; p.y = wy; p.ms = ch.uptimeMillis
+                                    // replay batched samples so fast flicks cut along their real path
+                                    for (h in ch.historical) segment(p, h.position.x / look.scale, (h.position.y - look.topInset) / look.scale, h.uptimeMillis)
+                                    segment(p, wx, wy, ch.uptimeMillis)
                                 } else {
-                                    ptrs.remove(id)?.let { engine.endSwipe(it.swipe); it.trail.released = true }
+                                    // the stretch between the last move and lift-off still cuts
+                                    ptrs.remove(id)?.let { p -> segment(p, wx, wy, ch.uptimeMillis); engine.endSwipe(p.swipe); p.trail.released = true }
                                 }
                                 ch.consume()
                             }

@@ -70,7 +70,7 @@ export ANDROID_HOME=/path/to/android-sdk
 
 - `RulesTest` covers the number theory and the slice, catch and clang rules. It also checks that a boss needs exactly Ω(n) cuts, plays a bot through Arcade to wave 3+, and completes the whole Training mode.
 - `SynthTest` renders every sound and checks levels.
-- `ShotsTest` renders every screen with Robolectric native graphics into `app/build/shots/`. It also drives the renderer through forced states: every impact-frame style, a boss kill and finisher, overdrive, each blade, and game over.
+- `ShotsTest` renders every screen with Robolectric native graphics into `app/build/shots/`. It also pushes real touch input through the game screen, including a flick delivered as only down + up, and checks it divides a number. It also drives the renderer through forced states: every impact-frame style, a boss kill and finisher, overdrive, each blade, and game over.
 
 The APK is signed with a self-generated key in `keystore/` for personal sideloading. Generate your own key before any store release.
 

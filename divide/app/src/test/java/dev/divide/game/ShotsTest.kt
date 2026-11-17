@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import dev.divide.game.data.CODEX
@@ -69,6 +71,35 @@ class ShotsTest {
         rule.onNodeWithText("II").performClick()
         repeat(4) { rule.mainClock.advanceTimeBy(250) }
         shot("game_pause")
+    }
+
+    @Test fun swipesCut() {
+        app(Screen.Game, Mode.Zen, ms = 4000)
+        val e = dev.divide.game.screens.GameDebug.engine!!; val look = dev.divide.game.screens.GameDebug.look!!
+        fun target(): Ent? = e.ents.firstOrNull { it.alive && it.kind == Kind.Composite && !it.harvest && it.y > 250f && it.y < e.groundY - 300f }
+        var guard = 0
+        while (target() == null && guard++ < 80) rule.mainClock.advanceTimeBy(250)
+        // 1) a flick reported as down + up only (no move events), the way slow devices deliver it
+        var t = target()!!
+        val before = e.sliced
+        rule.onRoot().performTouchInput {
+            down(androidx.compose.ui.geometry.Offset(t.x * look.scale, (t.y - 260f) * look.scale + look.topInset))
+            advanceEventTime(60)
+            updatePointerTo(0, androidx.compose.ui.geometry.Offset(t.x * look.scale + 4f, (t.y + 300f) * look.scale + look.topInset))
+            up()
+        }
+        rule.mainClock.advanceTimeBy(100)
+        check(e.sliced > before) { "flick did not cut (sliced=${e.sliced})" }
+        // 2) an ordinary multi-sample swipe
+        guard = 0
+        while (target() == null && guard++ < 80) rule.mainClock.advanceTimeBy(250)
+        t = target()!!
+        val b2 = e.sliced
+        rule.onRoot().performTouchInput {
+            swipe(androidx.compose.ui.geometry.Offset((t.x - 250f) * look.scale, t.y * look.scale + look.topInset), androidx.compose.ui.geometry.Offset((t.x + 250f) * look.scale, (t.y + 40f) * look.scale + look.topInset), durationMillis = 90)
+        }
+        rule.mainClock.advanceTimeBy(100)
+        check(e.sliced > b2) { "swipe did not cut" }
     }
 
     @Test fun arcadeLive() { app(Screen.Game, Mode.Arcade, ms = 6000); shot("game_arcade_live") }
