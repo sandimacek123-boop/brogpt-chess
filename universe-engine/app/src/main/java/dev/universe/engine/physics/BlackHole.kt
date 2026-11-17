@@ -210,9 +210,9 @@ private val BlackHoleInfo = LabInfo(
 )
 
 @Composable
-fun BlackHoleLab(domain: Domain = Domain.Physics) {
+fun BlackHoleLab(domain: Domain = Domain.Physics, startMode: Int = 0, title: String = "Black Hole") {
     val app = LocalApp.current
-    var mode by remember { mutableIntStateOf(0) }
+    var mode by remember { mutableIntStateOf(startMode) }
     val tm = rememberTextMeasurer(cacheSize = 48)
     val path = remember { Path() }
     val time by rememberTime(mode == 0)
@@ -245,7 +245,7 @@ fun BlackHoleLab(domain: Domain = Domain.Physics) {
     var rOver by remember { mutableFloatStateOf(3f) }
     LaunchedEffect(rOver < 1f) { if (rOver < 1f && mode == 2) app.discover("horizon") }
 
-    LabScaffold("Black Hole", domain, BlackHoleInfo, canvas = {
+    LabScaffold(title, domain, BlackHoleInfo, canvas = {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width; val h = size.height; val dp = 1.dp.toPx()
             when (mode) {

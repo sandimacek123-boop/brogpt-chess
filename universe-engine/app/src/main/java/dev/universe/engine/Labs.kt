@@ -15,11 +15,13 @@ import dev.universe.engine.core.ui.glowDot
 import dev.universe.engine.core.ui.glowPath
 import dev.universe.engine.math.*
 import dev.universe.engine.physics.*
+import dev.universe.engine.astro.*
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.pow
 
 private const val TAU = (2 * PI).toFloat()
 private val DrawScope.u: Float get() = size.minDimension
@@ -136,6 +138,37 @@ object Labs {
         }) { EnergyLab() },
     )
 
-    val all: List<LabDef> = math + physics
+    private val astro = listOf(
+        LabDef("solar", Domain.Astro, "Solar System", "Every planet where it really is today. Fly between them.", { t, c ->
+            drawCircle(UE.Amber, u * 0.08f, center); drawCircle(UE.Amber.copy(alpha = 0.25f), u * 0.15f, center)
+            for (k in 0 until 4) { val r = u * (0.16f + k * 0.085f); drawOval(c.copy(alpha = 0.3f), Offset(center.x - r, center.y - r * 0.45f), Size(r * 2, r * 0.9f), style = Stroke(1f)); val a = t * (1.5f / (k + 1)) + k * 1.7f; glowDot(center + Offset(cos(a) * r, sin(a) * r * 0.45f), listOf(UE.Text, UE.Amber, UE.Blue, UE.Red)[k], u * 0.03f) }
+        }) { SolarSystemLab() },
+        LabDef("stars", Domain.Astro, "Life of a Star", "From birth to white dwarf, neutron star or black hole.", { t, c ->
+            val ph = (t * 0.2f) % 1f; val r = u * (0.08f + 0.3f * (if (ph < 0.6f) ph / 0.6f * 0.2f else if (ph < 0.85f) 0.2f + (ph - 0.6f) * 3.2f else 0.02f))
+            val col = if (ph < 0.6f) Color(0xFFFFF3D6) else if (ph < 0.85f) Color(0xFFFF8A5B) else c
+            drawCircle(col.copy(alpha = 0.25f), r * 1.8f, center); drawCircle(col, r, center)
+        }) { StarsLab() },
+        LabDef("pulsar", Domain.Astro, "Neutron Stars and Pulsars", "Cosmic lighthouses, 12 km wide and spinning 700 times a second.", { t, c ->
+            val a = t * 3f
+            for (s in listOf(1f, -1f)) { val d = Offset(cos(a) * s, sin(a) * 0.4f * s); drawLine(c.copy(alpha = 0.35f), center, center + d * (u * 0.5f), u * 0.08f, StrokeCap.Round) }
+            glowDot(center, Color.White, u * 0.07f)
+        }) { PulsarLab() },
+        LabDef("bh_astro", Domain.Astro, "Black Holes Up Close", "Ray-traced shadows, photon rings and lensed starlight.", { t, c ->
+            rotate(-12f, center) { drawOval(UE.Amber.copy(alpha = 0.9f), Offset(center.x - u * 0.44f, center.y - u * 0.09f), Size(u * 0.88f, u * 0.18f), style = Stroke(u * 0.06f)) }
+            drawArc(UE.Amber.copy(alpha = 0.7f + 0.3f * sin(t)), 190f, 160f, false, Offset(center.x - u * 0.24f, center.y - u * 0.26f), Size(u * 0.48f, u * 0.48f), style = Stroke(u * 0.05f))
+            drawCircle(Color.Black, u * 0.17f, center)
+        }) { BlackHoleLab(Domain.Astro, startMode = 1, title = "Black Holes Up Close") },
+        LabDef("galaxy", Domain.Astro, "Galaxies", "Density-wave spiral arms and the dark-matter mystery.", { t, c ->
+            val pts = ArrayList<Offset>()
+            for (k in 0 until 140) { val r = (k / 140f) * u * 0.45f; val a = k * 0.33f * 2 + (k % 2) * PI.toFloat() + t * 0.4f; pts += center + Offset(cos(a + r / u * 6) * r, sin(a + r / u * 6) * r * 0.6f) }
+            drawPoints(pts, PointMode.Points, c, u * 0.035f, StrokeCap.Round); drawCircle(UE.Amber.copy(alpha = 0.6f), u * 0.06f, center)
+        }) { GalaxyLab() },
+        LabDef("scale", Domain.Astro, "Cosmic Scale", "Sixty-two powers of ten, from the Planck length to the cosmos.", { t, c ->
+            val ph = (t * 0.25f) % 1f
+            for (k in 0 until 5) { val r = u * 0.48f * ((k + ph) / 5f).pow(2); drawCircle(c.copy(alpha = 0.7f - 0.1f * k), r, center, style = Stroke(1.5f)) }
+        }) { CosmicScaleLab() },
+    )
+
+    val all: List<LabDef> = math + physics + astro
     val byId: Map<String, LabDef> = all.associateBy { it.id }
 }
