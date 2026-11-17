@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { VisualizerController, VisualizerStatus } from '../engine/visualizer';
 import { CanvasRecorder, RESOLUTIONS, recordingSupported, supportedFormats } from '../record/recorder';
@@ -9,7 +10,8 @@ import { isNative, saveAndShareNative } from '../native';
 
 type RecState = 'idle' | 'recording' | 'finalizing';
 
-export default function RecordingPanel({ controller, status }: { controller: VisualizerController; status: VisualizerStatus }) {
+export default function RecordingPanel({ controller, status, bare }: { controller: VisualizerController; status: VisualizerStatus; bare?: boolean }) {
+  const Wrap = bare ? Bare : Card;
   const { settings, audio, update } = useSettings();
   const formats = useMemo(() => supportedFormats(), []);
   const [res, setRes] = useState('1080p');
@@ -31,9 +33,9 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
 
   if (!recordingSupported() || formats.length === 0) {
     return (
-      <Card title="Recording">
+      <Wrap title="Recording">
         <p className="text-sm text-ink-400">Video recording needs MediaRecorder and canvas.captureStream, which this browser does not support.</p>
-      </Card>
+      </Wrap>
     );
   }
 
@@ -98,7 +100,7 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
   };
 
   return (
-    <Card
+    <Wrap
       title="Recording"
       right={
         state === 'recording' ? (
@@ -108,7 +110,7 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
         ) : null
       }
     >
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className={`grid gap-3 ${bare ? 'grid-cols-1' : 'sm:grid-cols-3'}`}>
         <Field label="Resolution">
           <Select ariaLabel="Resolution" value={res} onChange={setRes} options={RESOLUTIONS.map((r) => ({ value: r.id, label: r.label }))} disabled={state !== 'idle'} />
         </Field>
@@ -151,8 +153,8 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
         )}
       </div>
       <p className="mt-3 text-xs leading-relaxed text-ink-400">
-        Recording restarts the current run from the beginning at the chosen resolution and stops automatically shortly after it finishes. MP4 is listed only when your
-        browser can encode it.
+        Recording restarts the current run from the beginning at the chosen resolution, frames the visualization edge to edge with a title caption, and stops
+        automatically shortly after it finishes. MP4 is listed only when your browser can encode it.
       </p>
       {video && state === 'idle' && (
         <div className="mt-4 flex flex-col gap-3">
@@ -181,6 +183,15 @@ export default function RecordingPanel({ controller, status }: { controller: Vis
           {saveMsg && <p className="text-xs text-ink-300">{saveMsg}</p>}
         </div>
       )}
-    </Card>
+    </Wrap>
+  );
+}
+
+function Bare({ children, right }: { title?: string; right?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div>
+      {right && <div className="mb-3 flex justify-end">{right}</div>}
+      {children}
+    </div>
   );
 }

@@ -104,3 +104,59 @@ export const IconFullscreen = (p: SVGProps<SVGSVGElement>) => (
     <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
   </svg>
 );
+export const IconStepBack = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M18 5v14L9 12z" fill="currentColor" stroke="none" />
+    <path d="M6 5v14" />
+  </svg>
+);
+export const IconInfo = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </svg>
+);
+export const IconSearch = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </svg>
+);
+export const IconLayers = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="m12 3 9 5-9 5-9-5z" />
+    <path d="m3 13 9 5 9-5" />
+  </svg>
+);
+export const IconBars = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M5 20v-4M10 20v-8M15 20v-12M20 20V4" />
+  </svg>
+);
+export const IconWave = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M3 12h2l2-6 3 12 3-9 2 5 2-2h4" />
+  </svg>
+);
+export const IconEyeOff = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c5 0 9 6 9 6a17 17 0 0 1-3.2 3.8M6.5 7.6C4.2 9.2 3 12 3 12s4 6 9 6a9 9 0 0 0 3.4-.7" />
+    <path d="M9.9 10a3 3 0 0 0 4.1 4.2" />
+  </svg>
+);
+export const IconChevron = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+export const IconArrowRight = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+);
+export const IconSpeed = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M12 14l4-5" />
+    <path d="M4.5 18a9 9 0 1 1 15 0" />
+  </svg>
+);

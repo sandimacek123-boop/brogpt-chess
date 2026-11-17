@@ -2,6 +2,8 @@ import { executeSort, RunRequest, RunResult } from '../core/execute';
 
 type Pending = { resolve: (r: RunResult) => void; reject: (e: Error) => void };
 
+class WorkerUnavailableError extends Error {}
+
 export class CancelledRunError extends Error {
   constructor() {
     super('cancelled');
@@ -18,6 +20,7 @@ export class SortClient {
   private worker: Worker | null = null;
   private pending = new Map<number, Pending>();
   private nextId = 1;
+  private workerFailed = false;
 
   private ensureWorker(): Worker | null {
     if (this.worker) return this.worker;
@@ -32,12 +35,15 @@ export class SortClient {
           p.resolve(r);
         }
       };
-      this.worker.onerror = (e) => {
-        const err = new Error(e.message || 'Worker error');
-        this.pending.forEach((p) => p.reject(err));
-        this.pending.clear();
+      this.worker.onerror = () => {
+        // The worker could not load (e.g. a restrictive host). Fall back to computing
+        // the pending runs on the main thread so the app keeps working.
         this.worker?.terminate();
         this.worker = null;
+        this.workerFailed = true;
+        const pending = [...this.pending.entries()];
+        this.pending.clear();
+        for (const [, p] of pending) p.reject(new WorkerUnavailableError());
       };
     } catch {
       this.worker = null;
@@ -48,14 +54,18 @@ export class SortClient {
   run(req: Omit<RunRequest, 'id'>): Promise<RunResult> {
     const id = this.nextId++;
     const full: RunRequest = { ...req, id, values: Int32Array.from(req.values) };
-    const w = this.ensureWorker();
+    const w = this.workerFailed ? null : this.ensureWorker();
     if (!w) {
       // Fallback: compute on the main thread.
       return new Promise((resolve) => setTimeout(() => resolve(executeSort(full)), 0));
     }
-    return new Promise((resolve, reject) => {
+    const copy = Int32Array.from(full.values);
+    return new Promise<RunResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
       w.postMessage({ type: 'run', req: full }, [full.values.buffer]);
+    }).catch((e) => {
+      if (e instanceof WorkerUnavailableError) return executeSort({ ...full, values: copy });
+      throw e;
     });
   }
 

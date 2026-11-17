@@ -4,7 +4,7 @@ export function Field({ label, hint, children, right }: { label: string; hint?: 
   return (
     <div className="flex flex-col gap-1.5 min-w-0">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-300">{label}</span>
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-ink-400">{label}</span>
         {right && <span className="text-xs text-ink-300 tnum">{right}</span>}
       </div>
       {children}
@@ -36,7 +36,7 @@ export function Select<T extends string>({
       disabled={disabled}
       value={value}
       onChange={(e) => onChange(e.target.value as T)}
-      className={`h-11 w-full rounded-xl border border-white/10 bg-ink-800 px-3 text-sm text-ink-100 outline-none transition hover:border-white/20 focus-visible:border-[#7b5cff] focus-visible:ring-2 focus-visible:ring-[#7b5cff]/40 disabled:opacity-50 ${className}`}
+      className={`h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 text-[13px] text-ink-100 outline-none transition duration-300 hover:border-white/20 hover:bg-white/[0.05] focus-visible:border-accent/70 focus-visible:ring-2 focus-visible:ring-accent/30 disabled:opacity-50 ${className}`}
     >
       {options?.map((o) => (
         <option key={o.value} value={o.value} disabled={o.disabled}>
@@ -95,13 +95,13 @@ export function Toggle({ checked, onChange, label, description }: { checked: boo
   return (
     <label htmlFor={id} className="flex cursor-pointer items-center justify-between gap-4 py-1.5">
       <span className="min-w-0">
-        <span className="block text-sm text-ink-100">{label}</span>
+        <span className="block text-[13px] text-ink-100">{label}</span>
         {description && <span className="block text-xs text-ink-400">{description}</span>}
       </span>
       <span className="relative inline-flex shrink-0">
         <input id={id} type="checkbox" role="switch" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className="h-6 w-11 rounded-full bg-ink-600 transition peer-checked:bg-[#7b5cff] peer-focus-visible:ring-2 peer-focus-visible:ring-[#7b5cff]/60" />
-        <span className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+        <span className="h-[22px] w-10 rounded-full bg-white/10 transition duration-300 peer-checked:bg-accent peer-checked:shadow-[0_0_18px_rgba(139,123,255,0.55)] peer-focus-visible:ring-2 peer-focus-visible:ring-accent/60" />
+        <span className="pointer-events-none absolute left-[3px] top-[3px] h-4 w-4 rounded-full bg-white shadow transition duration-300 ease-[cubic-bezier(.22,1,.36,1)] peer-checked:translate-x-[18px]" />
       </span>
     </label>
   );
@@ -127,10 +127,10 @@ export function Button({
   ariaPressed?: boolean;
 }) {
   const styles = {
-    primary: 'bg-white text-ink-950 hover:bg-white/90 shadow-[0_0_24px_rgba(123,92,255,0.35)]',
-    ghost: 'border border-white/10 bg-white/[0.03] text-ink-100 hover:bg-white/[0.08] hover:border-white/20',
-    soft: 'bg-[#7b5cff]/15 text-[#c9bcff] hover:bg-[#7b5cff]/25 border border-[#7b5cff]/30',
-    danger: 'bg-[#ff2e63] text-white hover:bg-[#ff2e63]/90',
+    primary: 'bg-white text-ink-950 hover:bg-white/90 shadow-[0_0_30px_-4px_rgba(139,123,255,0.55)]',
+    ghost: 'border border-white/[0.08] bg-white/[0.03] text-ink-100 hover:bg-white/[0.07] hover:border-white/[0.16]',
+    soft: 'bg-accent/[0.14] text-[#cfc7ff] hover:bg-accent/25 border border-accent/30',
+    danger: 'bg-[#ff2e63] text-white hover:bg-[#ff2e63]/90 shadow-[0_0_30px_-6px_rgba(255,46,99,0.7)]',
   }[variant];
   return (
     <button
@@ -140,7 +140,7 @@ export function Button({
       aria-pressed={ariaPressed}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-3.5 text-sm font-medium transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7b5cff]/70 ${styles} ${className}`}
+      className={`inline-flex h-10 min-w-10 items-center justify-center gap-2 rounded-xl px-3.5 text-[13px] font-medium transition duration-300 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 ${styles} ${className}`}
     >
       {children}
     </button>
@@ -159,7 +159,7 @@ export function Segmented<T extends string>({
   ariaLabel: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={ariaLabel} className="inline-flex h-11 rounded-xl border border-white/10 bg-ink-800 p-1">
+    <div role="radiogroup" aria-label={ariaLabel} className="inline-flex h-9 rounded-xl border border-white/[0.08] bg-white/[0.03] p-[3px]">
       {options.map((o) => (
         <button
           key={o.value}
@@ -168,8 +168,8 @@ export function Segmented<T extends string>({
           aria-checked={value === o.value}
           title={o.title}
           onClick={() => onChange(o.value)}
-          className={`rounded-lg px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7b5cff]/70 ${
-            value === o.value ? 'bg-white text-ink-950' : 'text-ink-300 hover:text-ink-100'
+          className={`rounded-lg px-3 text-[11.5px] font-semibold transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 ${
+            value === o.value ? 'bg-white text-ink-950 shadow-[0_0_20px_-4px_rgba(255,255,255,0.5)]' : 'text-ink-300 hover:text-ink-100'
           }`}
         >
           {o.label}
@@ -182,9 +182,9 @@ export function Segmented<T extends string>({
 export function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="flex items-center justify-between gap-3 py-1">
-      <span className="text-sm text-ink-100">{label}</span>
+      <span className="text-[13px] text-ink-100">{label}</span>
       <span className="flex items-center gap-2">
-        <span className="font-mono text-xs text-ink-400 uppercase">{value}</span>
+        <span className="font-mono text-[11px] text-ink-400 uppercase">{value}</span>
         <input type="color" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} />
       </span>
     </label>
@@ -206,10 +206,10 @@ export function Stat({ label, value, sub, accent }: { label: string; value: Reac
 
 export function Card({ title, children, className = '', right }: { title?: ReactNode; children: ReactNode; className?: string; right?: ReactNode }) {
   return (
-    <section className={`card p-4 sm:p-5 ${className}`}>
+    <section className={`panel p-6 ${className}`}>
       {title && (
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold tracking-wide text-ink-100">{title}</h2>
+        <div className="mb-5 flex items-center justify-between gap-3">
+          <h2 className="font-display text-[15px] font-semibold tracking-tight text-white">{title}</h2>
           {right}
         </div>
       )}

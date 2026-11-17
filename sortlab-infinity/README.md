@@ -44,14 +44,21 @@ Without signing properties the release APK is signed with the local debug key, w
 
 ## Features
 
-- **Visualizer** — large central canvas; default vertical bars on a shared baseline that form a right-angled triangle (shortest left, tallest right) with a continuous rainbow gradient. Start / pause / resume, single step, restart, new array, skip to end, slow-mo (0.1×) and turbo (20×), log-scale speed (1 – 500k ops/s), element count up to 16,384, fullscreen, keyboard shortcuts (Space, →, R, N, F).
-- **Live statistics** — comparisons, swaps, array writes, auxiliary writes, total operations, progress, playback time, FPS / draw time, and *measured* compute time. Comparison counts are shown next to ⌈log₂ n!⌉, n log₂ n and n(n−1)/2.
-- **20 visualization modes** — vertical bars, horizontal bars, circular ring, spiral, scatter plot, rainbow circle, sunburst, triangle, waveform, dots, pixel grid, color wheel, helix, rainbow stripes, gradient blocks, disparity, 3D bars, 3D sphere, radial lines and migraine mode (non-flashing, intensity control, respects reduced motion).
-- **Animation engine** — highlights for comparisons / swaps / writes, swapped bars slide to their new positions, height interpolation (or instant transitions), post-sort verification sweep, cheap bloom glow, adaptive quality when frames get heavy.
-- **Audio** — pitch from element value, 4 waveforms, 9 musical scales, pitch range, per-operation toggles, throttling + voice limit + compressor to prevent distortion. The AudioContext is created only from a user gesture.
-- **Battle mode** — 2–8 algorithms on the identical array; each is computed and timed in the worker, then all lanes start on the same frame. Pacing is either *equal operations per second* (finish order = operation count) or *real time* (lane durations proportional to measured compute time). Rankings table, winner banner and comparison charts.
-- **Recording** — 720p / 1080p / 1440p / square / vertical, 30 or 60 fps, optional sound, WebM (VP9/VP8) and MP4 only where the browser can encode it; progress display, preview and download.
+SortLab Infinity is designed as a **desktop experience** (≥ 1024 px wide; smaller windows get a "made for the big screen" notice with a continue option).
+
+- **Cinematic stage** — the visualization fills the whole window. The title card, live HUD and a glass transport bar float above it and fade away while a sort plays (move the mouse to bring them back, or press `H`); the stage smoothly reframes to full bleed when they do. Floor reflection, palette-driven ambient light, vignette and film grain; a short title sequence on first visit; bars rise in from the baseline.
+- **Timeline scrubbing** — the transport bar shows an activity waveform of the entire run (bright = swaps/writes, dim = comparisons). Drag anywhere to seek, or step forward/backward one operation at a time.
+- **⌘K command palette** for all 103 algorithms with fuzzy search, keyboard navigation and a detail pane; a **mode gallery** with rendered thumbnails of all 20 visualizations.
+- **Live statistics** — comparisons, swaps, array writes, auxiliary writes, progress, measured compute time, FPS. An info drawer (`I`) compares the run to ⌈log₂ n!⌉, n log₂ n and n(n−1)/2.
+- **20 visualization modes** — vertical bars (default rainbow right-angled triangle), horizontal bars, circular ring, spiral, scatter plot, rainbow circle, sunburst, triangle, waveform, dots, pixel grid, color wheel, helix, rainbow stripes, gradient blocks, disparity, 3D bars, 3D sphere, radial lines and migraine mode (non-flashing, intensity control, respects reduced motion).
+- **Animation engine** — highlights for comparisons / swaps / writes, swapped bars slide to their new positions, height interpolation (or instant transitions), post-sort verification sweep, bloom glow, adaptive quality.
+- **Audio** — pitch from element value, 4 waveforms, 9 musical scales, pitch range, per-operation toggles, throttling + voice limit + compressor. The AudioContext is created only from a user gesture.
+- **Battle mode** — 2–8 algorithms on the identical array, each computed and timed in the worker, all lanes starting on the same frame; equal-operations or real-time pacing, winner reveal, rankings and head-to-head charts.
+- **Library** — every algorithm as a card with complexity details; hover a card to watch a live mini-sort.
+- **Recording** — 720p to 1440p, square or vertical, 30/60 fps, optional sound, WebM (and MP4 where the browser can encode it). Videos are framed edge to edge with a burned-in title caption and live counters.
 - **Settings** — every visual, sorting and audio option, saved to `localStorage`.
+
+**Keyboard:** `Space` play/pause · `←` `→` step · `⌘K` / `K` algorithms · `V` visuals · `R` restart · `N` new array · `E` skip to end · `[` `]` speed · `I` info · `H` hide interface · `F` fullscreen · `Esc` close.
 
 ## Architecture
 

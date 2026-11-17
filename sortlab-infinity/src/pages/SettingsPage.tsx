@@ -23,6 +23,10 @@ const VISUAL_KEYS: (keyof Settings)[] = [
   'writeColor',
   'migraineIntensity',
   'motion',
+  'reflection',
+  'ambient',
+  'grain',
+  'autoHideUI',
 ];
 const SORT_KEYS: (keyof Settings)[] = ['algorithmId', 'n', 'pattern', 'seed', 'lockSeed', 'speed', 'speedMode', 'opLimit', 'autoVerify'];
 const AUDIO_KEYS: (keyof Settings)[] = ['soundEnabled', 'volume', 'waveform', 'scale', 'pitchMin', 'pitchMax', 'soundCompare', 'soundSwap', 'soundWrite'];
@@ -46,11 +50,14 @@ export default function SettingsPage() {
   };
   return (
     <div className="flex flex-col gap-5">
-      <div className="fade-up">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Settings</h1>
-        <p className="mt-1 text-sm text-ink-400">Preferences are saved automatically in this browser.</p>
-      </div>
-      <div className="grid gap-5 xl:grid-cols-3">
+      <header className="fade-up mb-8">
+        <div className="kicker">Settings</div>
+        <h1 className="mt-4 font-display text-[clamp(56px,6vw,96px)] font-semibold leading-[0.92] tracking-[-0.045em] text-white">
+          Make it yours.
+        </h1>
+        <p className="mt-5 text-[15px] text-ink-400">Every change applies live and is saved in this browser.</p>
+      </header>
+      <div className="grid grid-cols-3 gap-5">
         <Card title="Visual" right={<Button onClick={() => reset(VISUAL_KEYS)}>Reset</Button>}>
           <div className="flex flex-col gap-4">
             <Preview s={s} />
@@ -79,6 +86,10 @@ export default function SettingsPage() {
             <Field label="Animation smoothing" right={s.smoothing === 0 ? 'Instant' : `${Math.round(s.smoothing * 100)}%`} hint="0 = instant transitions. Higher values interpolate bar heights and slide swapped bars.">
               <Slider ariaLabel="Animation smoothing" min={0} max={95} value={Math.round(s.smoothing * 100)} onChange={(v) => update({ smoothing: v / 100 })} />
             </Field>
+            <Toggle checked={s.reflection} onChange={(v) => update({ reflection: v })} label="Floor reflection" description="Mirror bars on a glossy floor." />
+            <Toggle checked={s.ambient} onChange={(v) => update({ ambient: v })} label="Ambient light" description="Soft coloured haze behind the visualization." />
+            <Toggle checked={s.grain} onChange={(v) => update({ grain: v })} label="Film grain" description="Subtle cinematic texture over the stage." />
+            <Toggle checked={s.autoHideUI} onChange={(v) => update({ autoHideUI: v })} label="Cinematic auto-hide" description="Fade the interface away while sorting; move the mouse to bring it back." />
             <Toggle checked={s.showHighlights} onChange={(v) => update({ showHighlights: v })} label="Highlight operations" description="Colour bars involved in comparisons, swaps and writes." />
             <div className="rounded-xl border border-white/10 p-3">
               <ColorField label="Comparison highlight" value={s.compareColor} onChange={(v) => update({ compareColor: v })} />

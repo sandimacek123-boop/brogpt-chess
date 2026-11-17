@@ -150,6 +150,24 @@ export class Player {
     return this.advance(whole);
   }
 
+  /**
+   * Seek to an absolute operation index. Forward seeks continue from the current
+   * position; backward seeks replay from the initial array (traces are deterministic).
+   */
+  seek(target: number) {
+    target = Math.max(0, Math.min(this.totalOps, Math.floor(target)));
+    if (target < this.pos) {
+      const trace = this.trace;
+      const keep = this.heights.slice();
+      const keepOff = this.offsets.slice();
+      this.load(this.initial, trace);
+      this.heights.set(keep);
+      this.offsets.set(keepOff);
+    }
+    this.advance(target - this.pos);
+    this.events = [];
+  }
+
   /** Jump straight to the end of the trace. */
   finish() {
     this.advance(this.totalOps - this.pos);
@@ -201,4 +219,30 @@ export class Player {
     for (let i = 1; i < this.n; i++) if (this.arr[i - 1] > this.arr[i]) return i;
     return -1;
   }
+}
+
+/**
+ * Summarise a trace into `buckets` columns for the timeline waveform:
+ * for each slice of the run, the share of comparisons and of moves (swaps + writes).
+ */
+export function traceActivity(trace: Int32Array, buckets: number): { compares: Float32Array; moves: Float32Array } {
+  const total = trace.length / OP_STRIDE;
+  const compares = new Float32Array(buckets);
+  const moves = new Float32Array(buckets);
+  if (total === 0) return { compares, moves };
+  const per = total / buckets;
+  for (let b = 0; b < buckets; b++) {
+    const from = Math.floor(b * per);
+    const to = Math.max(from + 1, Math.floor((b + 1) * per));
+    let c = 0;
+    let m = 0;
+    for (let p = from; p < to && p < total; p++) {
+      if (trace[p * OP_STRIDE] === OP_COMPARE) c++;
+      else m++;
+    }
+    const n = Math.max(1, to - from);
+    compares[b] = c / n;
+    moves[b] = m / n;
+  }
+  return { compares, moves };
 }

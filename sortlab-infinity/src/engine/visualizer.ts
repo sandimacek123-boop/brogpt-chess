@@ -4,7 +4,7 @@ import type { RunResult } from '../core/execute';
 import type { SortStats } from '../core/ops';
 import { SortAudio } from '../audio/audio';
 import { effectiveSpeed, prefersReducedMotion, Settings } from '../state/settings';
-import { Player } from './player';
+import { Player, traceActivity } from './player';
 import { CancelledRunError, SortClient } from './sortClient';
 import { Stage } from './stage';
 
@@ -26,6 +26,8 @@ export interface VisualizerStatus {
   quality: number;
   sorted: boolean | null;
   message: string | null;
+  /** Increments whenever a new trace is loaded (for the timeline waveform). */
+  traceVersion: number;
 }
 
 /** Drives the single-algorithm visualizer: data, worker computation, playback loop, audio. */
@@ -54,6 +56,13 @@ export class VisualizerController {
   onFinished: (() => void) | null = null;
   private stepOnce = false;
   private visible = true;
+  /** UI-occupied margins (CSS px). The stage eases toward `insetTarget` for a smooth reframe. */
+  inset = { top: 0, right: 0, bottom: 0, left: 0 };
+  insetTarget = { top: 0, right: 0, bottom: 0, left: 0 };
+  private insetInit = false;
+  private rise = 1;
+  traceVersion = 0;
+  activity: { compares: Float32Array; moves: Float32Array } | null = null;
 
   constructor(settings: Settings, audio: SortAudio) {
     this.settings = settings;
@@ -102,6 +111,8 @@ export class VisualizerController {
   private invalidate() {
     if (this.phase === 'computing') this.client.cancelAll();
     this.result = null;
+    this.activity = null;
+    this.traceVersion++;
     this.player.load(this.player.initial);
     this.resetSweep();
     this.playbackMs = 0;
@@ -118,6 +129,8 @@ export class VisualizerController {
     if (this.phase === 'computing') this.client.cancelAll();
     this.player.load(data);
     this.result = null;
+    this.activity = null;
+    this.traceVersion++;
     this.resetSweep();
     this.playbackMs = 0;
     this.sortedFlag = null;
@@ -168,6 +181,8 @@ export class VisualizerController {
       });
       this.result = res;
       this.player.setTrace(res.trace);
+      this.activity = traceActivity(res.trace, 480);
+      this.traceVersion++;
       this.playbackMs = 0;
       if (res.status === 'limit')
         this.message = `Operation limit reached after ${res.operations.toLocaleString()} operations — playback shows the partial run; the array will not be fully sorted.`;
@@ -241,6 +256,47 @@ export class VisualizerController {
     this.emit(true);
   }
 
+  /** Recording framing in CSS px of the on-screen canvas (scaled to the video by the stage). */
+  private recordInset() {
+    const c = this.stage!.canvas;
+    const h = c.clientHeight || 600;
+    return { top: h * 0.2, right: h * 0.05, bottom: h * 0.1, left: h * 0.05 };
+  }
+
+  private caption() {
+    const a = getAlgorithm(this.settings.algorithmId);
+    const p = this.player;
+    return {
+      title: a.name,
+      sub: `${p.n.toLocaleString('en-US')} elements · ${a.average} average`,
+      stat: `${p.stats.comparisons.toLocaleString('en-US')} cmp · ${(p.stats.swaps + p.stats.writes).toLocaleString('en-US')} moves`,
+    };
+  }
+
+  /** Cinematic entrance: bars grow up from the baseline. */
+  playIntro() {
+    this.rise = 0;
+  }
+
+  /** Scrub to an absolute operation index (timeline). */
+  seek(pos: number) {
+    if (!this.result || this.phase === 'computing') return;
+    this.player.seek(pos);
+    this.resetSweep();
+    this.sortedFlag = null;
+    if (this.player.done) {
+      this.phase = 'done';
+      this.sortedFlag = this.player.firstInversion() < 0;
+    } else if (this.phase !== 'playing') this.phase = 'paused';
+    this.emit(true);
+  }
+
+  stepBack() {
+    if (!this.result) return;
+    if (this.phase === 'playing') this.phase = 'paused';
+    this.seek(this.player.pos - 1);
+  }
+
   skipToEnd() {
     if (!this.result) return;
     this.player.finish();
@@ -292,6 +348,15 @@ export class VisualizerController {
     // Highlights fade faster at high speed so they stay readable.
     const decay = this.phase === 'playing' ? Math.max(4, Math.min(30, speed / 20)) : 1.5;
     p.animate(dt, s.smoothing, decay);
+    if (this.rise < 1) this.rise = reduced ? 1 : Math.min(1, this.rise + dt / 1.6);
+    const k = !this.insetInit || reduced ? 1 : 1 - Math.pow(0.9, dt * 60);
+    this.insetInit = true;
+    const recording = !!this.stage?.fixedSize;
+    const target = recording ? this.recordInset() : this.insetTarget;
+    for (const side of ['top', 'right', 'bottom', 'left'] as const) {
+      const d = target[side] - this.inset[side];
+      this.inset[side] = recording || Math.abs(d) < 0.3 ? target[side] : this.inset[side] + d * k;
+    }
     if (this.sweep >= 0) {
       const target = this.sweepFail >= 0 ? this.sweepFail + 1 : p.n;
       if (this.sweep < target) {
@@ -308,7 +373,15 @@ export class VisualizerController {
         if (this.sweepHold > 0.9) this.resetSweep();
       }
     }
-    if (this.stage && this.visible) this.stage.draw(p, s, { sweep: Math.floor(this.sweep), sweepFail: this.sweepFail, time: this.clock, reducedMotion: reduced });
+    if (this.stage && this.visible) this.stage.draw(p, s, {
+        sweep: Math.floor(this.sweep),
+        sweepFail: this.sweepFail,
+        time: this.clock,
+        reducedMotion: reduced,
+        inset: this.inset,
+        rise: easeOutCubic(this.rise),
+        caption: recording ? this.caption() : undefined,
+      });
     this.emit(false, ts);
   }
 
@@ -339,14 +412,19 @@ export class VisualizerController {
       quality: this.stage?.quality ?? 0,
       sorted: this.sortedFlag,
       message: this.message,
+      traceVersion: this.traceVersion,
     };
   }
 
   private emit(force: boolean, ts = performance.now()) {
-    if (!force && ts - this.lastEmit < 80) return;
+    if (!force && ts - this.lastEmit < 50) return;
     this.lastEmit = ts;
     const st = this.status();
     this.listeners.forEach((fn) => fn(st));
   }
 }
 
+
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}

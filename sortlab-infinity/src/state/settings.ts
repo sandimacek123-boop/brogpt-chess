@@ -31,6 +31,10 @@ export interface Settings {
   writeColor: string;
   migraineIntensity: number;
   motion: 'system' | 'reduce' | 'full';
+  reflection: boolean;
+  ambient: boolean;
+  grain: boolean;
+  autoHideUI: boolean;
   // audio
   soundEnabled: boolean;
   volume: number;
@@ -58,16 +62,20 @@ export const DEFAULT_SETTINGS: Settings = {
   customFrom: '#00e1ff',
   customTo: '#ff3cac',
   background: '#050507',
-  barWidth: 0.85,
+  barWidth: 0.78,
   barSpacing: 0,
-  glow: 0.35,
-  smoothing: 0.55,
+  glow: 0.45,
+  smoothing: 0.6,
   showHighlights: true,
   compareColor: '#ffffff',
   swapColor: '#ff2e63',
   writeColor: '#35f2a0',
   migraineIntensity: 0.4,
   motion: 'system',
+  reflection: true,
+  ambient: true,
+  grain: true,
+  autoHideUI: true,
   soundEnabled: false,
   volume: 0.45,
   waveform: 'triangle',
@@ -79,7 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
   soundWrite: true,
 };
 
-const KEY = 'sortlab-infinity:settings:v1';
+const KEY = 'sortlab-infinity:settings:v2';
 
 export const N_STEPS = [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384];
 export const MAX_N = 16384;

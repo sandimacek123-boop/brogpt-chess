@@ -33,7 +33,15 @@ export interface StageExtras {
   sweepFail: number;
   time: number;
   reducedMotion: boolean;
+  /** Area (CSS px) kept clear for overlaid UI; the visualization is drawn inside it. */
+  inset?: { top: number; right: number; bottom: number; left: number };
+  /** Global vertical scale for intro animations (0..1). */
+  rise?: number;
+  /** Burned-in caption (used for video recordings). */
+  caption?: { title: string; sub: string; stat: string };
 }
+
+const REFLECT_MODES = new Set(['bars', 'blocks', 'stripes', 'dots', 'bars3d']);
 
 /** Owns one canvas and draws a Player's state into it with the current settings. */
 export class Stage {
@@ -75,6 +83,57 @@ export class Stage {
       c.width = w;
       c.height = h;
     }
+  }
+
+  private drawCaption(g: CanvasRenderingContext2D, W: number, H: number, c: { title: string; sub: string; stat: string }) {
+    const u = Math.min(W, H) / 1080;
+    const pad = 56 * u;
+    g.save();
+    g.textBaseline = 'alphabetic';
+    g.fillStyle = 'rgba(255,255,255,0.5)';
+    g.font = `600 ${15 * u}px "Inter Variable", Inter, sans-serif`;
+    g.fillText('SORTLAB INFINITY', pad, pad + 14 * u);
+    g.fillStyle = '#fff';
+    g.font = `600 ${46 * u}px "Inter Tight Variable", "Inter Variable", sans-serif`;
+    g.fillText(c.title, pad, pad + 66 * u);
+    g.fillStyle = 'rgba(255,255,255,0.55)';
+    g.font = `500 ${17 * u}px "JetBrains Mono Variable", monospace`;
+    g.fillText(c.sub, pad, pad + 96 * u);
+    g.textAlign = 'right';
+    g.fillStyle = '#fff';
+    g.font = `500 ${22 * u}px "JetBrains Mono Variable", monospace`;
+    g.fillText(c.stat, W - pad, pad + 20 * u);
+    g.restore();
+  }
+
+  /** Soft coloured haze behind the visualization (palette-driven light spill). */
+  private drawAmbient(g: CanvasRenderingContext2D, W: number, H: number, baseline: number, palette: string[], bg: string) {
+    const top = baseline - H * 0.6;
+    const lin = g.createLinearGradient(0, 0, W, 0);
+    const k = palette.length - 1;
+    for (let i = 0; i <= 6; i++) lin.addColorStop(i / 6, palette[Math.round((i / 6) * k)] ?? '#000');
+    g.save();
+    g.globalAlpha = 0.11;
+    g.fillStyle = lin;
+    g.fillRect(0, top, W, H - top);
+    g.restore();
+    // feather the haze upward so it has no edge, and let it fall off below the floor
+    const up = g.createLinearGradient(0, top, 0, baseline);
+    up.addColorStop(0, hexA(bg, 1));
+    up.addColorStop(0.75, hexA(bg, 0.35));
+    up.addColorStop(1, hexA(bg, 0));
+    g.fillStyle = up;
+    g.fillRect(0, top - 1, W, baseline - top + 1);
+    const down = g.createLinearGradient(0, baseline, 0, H);
+    down.addColorStop(0, hexA(bg, 0.2));
+    down.addColorStop(1, hexA(bg, 1));
+    g.fillStyle = down;
+    g.fillRect(0, baseline, W, H - baseline);
+    const vg = g.createRadialGradient(W / 2, baseline, 0, W / 2, baseline, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.7)');
+    g.fillStyle = vg;
+    g.fillRect(0, 0, W, H);
   }
 
   draw(player: Player, s: Settings, x: StageExtras) {
@@ -142,26 +201,69 @@ export class Stage {
     g.globalCompositeOperation = 'source-over';
     g.fillStyle = s.background;
     g.fillRect(0, 0, W, H);
+    const d = this.dpr;
+    const ins = x.inset ?? { top: 0, right: 0, bottom: 0, left: 0 };
+    const ix = Math.round(ins.left * d);
+    const iy = Math.round(ins.top * d);
+    const iw = Math.max(1, W - Math.round((ins.left + ins.right) * d));
+    const ih = Math.max(1, H - Math.round((ins.top + ins.bottom) * d));
+    if (s.ambient && player.n > 0) this.drawAmbient(g, W, H, iy + ih, palette, s.background);
+    g.save();
+    g.translate(ix, iy);
+    g.beginPath();
+    g.rect(-ix, -iy, W, iy + ih);
+    g.clip();
+    const rise = x.rise ?? 1;
+    if (rise < 1) {
+      g.translate(0, ih * (1 - rise));
+      g.scale(1, Math.max(0.001, rise));
+    }
     if (is2dMode(s.mode)) {
-      drawMode(g, s.mode, frame, W, H, opts);
+      drawMode(g, s.mode, frame, iw, ih, opts);
     } else {
       if (!threeInstance && !threeFailed) void loadThree();
       if (threeInstance) {
         try {
-          const img = threeInstance.render(s.mode, frame, W, H, opts);
-          g.drawImage(img, 0, 0, W, H);
+          const img = threeInstance.render(s.mode, frame, iw, ih, opts);
+          g.drawImage(img, 0, 0, iw, ih);
         } catch {
           threeFailed = true;
         }
       }
       if (!threeInstance) {
         g.fillStyle = 'rgba(255,255,255,0.6)';
-        g.font = `${14 * this.dpr}px ui-sans-serif, system-ui`;
+        g.font = `${14 * this.dpr}px Inter, ui-sans-serif, system-ui`;
         g.textAlign = 'center';
-        g.fillText(threeFailed ? 'WebGL is unavailable — choose a 2D visualization' : 'Loading 3D renderer…', W / 2, H / 2);
+        g.fillText(threeFailed ? 'WebGL is unavailable — choose a 2D visualization' : 'Loading 3D renderer…', iw / 2, ih / 2);
         g.textAlign = 'start';
       }
     }
+    g.restore();
+    const floor = H - (iy + ih);
+    if (s.reflection && REFLECT_MODES.has(s.mode) && floor > 4) {
+      const rh = Math.min(floor, ih * 0.32);
+      g.save();
+      g.globalAlpha = 0.22;
+      g.translate(0, (iy + ih) * 2);
+      g.scale(1, -1);
+      g.drawImage(this.canvas, ix, iy + ih - rh, iw, rh, ix, iy + ih - rh, iw, rh);
+      g.restore();
+      const fade = g.createLinearGradient(0, iy + ih, 0, iy + ih + rh);
+      fade.addColorStop(0, hexA(s.background, 0.35));
+      fade.addColorStop(1, hexA(s.background, 1));
+      g.fillStyle = fade;
+      g.fillRect(0, iy + ih, W, rh + 2);
+      g.fillStyle = 'rgba(255,255,255,0.07)';
+      g.fillRect(ix, iy + ih, iw, Math.max(1, d));
+    }
     if (s.glow > 0 && (this.quality === 0 || this.fixedSize)) applyGlow(g, W, H, s.glow);
+    if (x.caption) this.drawCaption(g, W, H, x.caption);
   }
+}
+
+function hexA(hex: string, a: number) {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const n = parseInt(h.slice(0, 6), 16) || 0;
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }

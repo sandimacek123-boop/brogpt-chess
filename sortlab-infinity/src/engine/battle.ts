@@ -241,6 +241,7 @@ export class BattleController {
           sweepFail: inv,
           time: this.clock,
           reducedMotion: reduced,
+          inset: { top: 58, right: 14, bottom: 16, left: 14 },
         });
       }
     }
