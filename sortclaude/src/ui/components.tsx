@@ -1,5 +1,6 @@
 import React, { useState, type ReactNode } from 'react';
 import { useApp } from '../state/store';
+import { isAndroid, saveBlobAndroid } from '../platform';
 
 // ------------------------------------------------------------------ icons (inline, original)
 const P = (d: string) => <path d={d} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />;
@@ -226,6 +227,7 @@ export function fmtTime(sec: number): string {
 
 /** Download a Blob; uses the desktop bridge when present. */
 export async function saveBlob(blob: Blob, filename: string): Promise<string | null> {
+  if (isAndroid()) return saveBlobAndroid(blob, filename);
   const bridge = (window as any).sortclaude;
   if (bridge?.saveFile) {
     const buf = new Uint8Array(await blob.arrayBuffer());

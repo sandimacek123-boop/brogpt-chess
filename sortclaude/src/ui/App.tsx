@@ -23,7 +23,8 @@ const TABS: { id: Page; label: string }[] = [
   { id: 'settings', label: 'Settings' },
 ];
 
-export const isDesktop = () => !!(window as any).sortclaude?.isDesktop;
+import { isDesktop, isAndroid } from '../platform';
+export { isDesktop };
 
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
@@ -96,6 +97,7 @@ export function App() {
     document.documentElement.style.setProperty('--sidebar', `${sidebarWidth}px`);
     (document.body.style as any).zoom = String(uiScale);
     document.body.classList.toggle('reduced-motion', reduced);
+    document.body.classList.toggle('native-android', isAndroid());
   }, [uiScale, sidebarWidth, reduced]);
 
   useEffect(() => {
@@ -123,7 +125,7 @@ export function App() {
         </div>
         <div className="nav-spacer" />
         <div className="nav-actions">
-          {!isDesktop() && (
+          {!isDesktop() && !isAndroid() && (
             <button
               className="btn ghost"
               title="Copy a shareable link to this configuration"

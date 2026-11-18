@@ -1,0 +1,14 @@
+{
+  "appId": "com.sortclaude.app",
+  "appName": "SortClaude 5.5",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#050509",
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

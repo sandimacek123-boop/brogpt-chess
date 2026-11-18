@@ -1,6 +1,6 @@
 # SortClaude 5.5
 
-A cinematic, scientifically accurate sorting-algorithm visualizer — one TypeScript codebase that ships as a **website** and a **Windows 11 desktop app** (Electron).
+A cinematic, scientifically accurate sorting-algorithm visualizer — one TypeScript codebase that ships as a **website**, a **Windows 11 desktop app** (Electron) and an **Android app** (Capacitor).
 
 Every bar, sound, counter, battle result and exported video frame is driven by the operations the algorithms *actually perform*. Nothing is faked.
 
@@ -49,6 +49,20 @@ Run this on Windows (recommended), or on Linux/macOS with **Wine** installed (ne
 The desktop app loads the bundled site through a privileged `app://` protocol — no dev server, no separate Node.js install. Preferences persist in the user profile. Exports use native Save dialogs or a chosen output folder.
 
 **Security:** `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, navigation and new windows blocked, permission requests denied except fullscreen/clipboard-write. The preload exposes exactly four functions (`saveFile`, `chooseFolder`, `saveFileTo`, `info`); `saveFileTo` only writes into folders the user picked in a dialog and never overwrites silently.
+
+## Android app
+
+```bash
+export ANDROID_HOME=/path/to/android-sdk   # needs platform 34 + build-tools 34, JDK 17 or 21
+npm run dist:android                         # → android/app/build/outputs/apk/release/app-release.apk
+```
+
+The APK wraps the same production build in a Capacitor WebView (works fully offline). Android-specific behaviour:
+- Exports (videos, CSV/JSON, presets, datasets) are written to app storage and handed to the **Android share sheet** — save to Files / Gallery / Drive or post directly.
+- The phone layout stacks the stage, controls and panels; the tab bar scrolls sideways; touch targets are enlarged.
+- `vite build --mode capacitor` drops the strict CSP meta tag, because Capacitor injects its native bridge as an inline script.
+- **Signing:** `android/keystore.properties` (gitignored) points at your release keystore. Without it, release builds are signed with the debug key. Keep the keystore: Android only accepts updates signed with the same key.
+- Requires a reasonably current **Android System WebView** (Android 8+ recommended; minSdk is 22).
 
 ## Controls
 

@@ -53,7 +53,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tnum { font-variant-numeric: tabular-nums; }
 
 /* ------------------------------------------------------------------ app shell */
-.app { display: grid; grid-template-rows: var(--nav-h) 1fr; height: 100%; }
+.app { display: grid; grid-template-rows: var(--nav-h) 1fr; grid-template-columns: minmax(0, 1fr); height: 100%; }
 .nav {
   display: flex; align-items: center; gap: 18px; padding: 0 16px;
   border-bottom: 1px solid var(--line);
@@ -353,3 +353,53 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+
+/* ------------------------------------------------------------------ phones & Android */
+@media (max-width: 860px) {
+  html, body, #root { height: auto; min-height: 100%; }
+  body { overflow-x: hidden; overflow-y: visible; }
+  .page { overflow: visible; }
+  .app { grid-template-rows: auto 1fr; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  .nav { flex-wrap: wrap; height: auto; gap: 6px 12px; padding: 8px 12px 0; -webkit-app-region: no-drag; }
+  .nav .nav-spacer { display: none; }
+  .nav .nav-actions { margin-left: auto; }
+  .tabs { order: 3; flex: 1 0 100%; min-width: 0; padding-bottom: 6px; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 8px 12px; }
+  .tab.active::after { bottom: -2px; }
+  .viz-layout, .battle-layout, .lab-layout, .studio-layout { grid-template-columns: minmax(0, 1fr) !important; }
+  .viz-main, .battle-main { min-width: 0; grid-template-rows: auto auto auto; min-height: 0; }
+  .viz-header { padding: 10px 12px 6px; gap: 8px 12px; }
+  .viz-title { font-size: 18px; }
+  .viz-meta { gap: 8px; }
+  .stage-wrap { margin: 0 10px; min-height: 46vh; }
+  .stage-stats { top: 8px; right: 8px; padding: 6px 8px; min-width: 0; gap: 0; }
+  .stage-stats .row { font-size: 10px; gap: 10px; }
+  .stage-stats .row:nth-child(n + 6) { display: none; }
+  .stage-corner .legend { display: none; }
+  .transport { padding: 8px 10px 10px; }
+  .timeline { flex-wrap: wrap; gap: 4px 10px; }
+  .timeline .scrub { order: 3; flex: 1 0 100%; }
+  .timeline .time { min-width: 0 !important; font-size: 11px; }
+  .controls { gap: 5px; }
+  .controls .grow { display: none; }
+  .controls .btn { height: 38px; }
+  .controls .btn.icon { width: 38px; }
+  .controls .input-group { width: 120px !important; }
+  .kbd { display: none; }
+  .arena { padding: 0 10px; grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: none !important; grid-auto-rows: minmax(220px, 34vh); }
+  .battle-side, .lab-list { max-height: none; }
+  .page-scroll { padding: 16px 12px 32px; }
+  .studio-preview { min-height: 70vh; }
+  .modal { padding: 16px; }
+  .cinema-counters { gap: 14px; font-size: 11px; flex-wrap: wrap; justify-content: center; width: 92%; }
+  input[type='range'] { height: 26px; }
+  input[type='range']::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7px; }
+  .toggle { width: 40px; height: 24px; }
+  .toggle::after { width: 18px; height: 18px; }
+  .toggle.on::after { transform: translateX(16px); }
+}
+/* bigger touch targets wherever the primary pointer is coarse */
+@media (pointer: coarse) {
+  .algo-item { padding: 10px 12px; }
+  .pick { padding: 9px 6px; }
+}

@@ -13,6 +13,7 @@ Environment used for building and testing: Linux container (4 vCPU, no GPU), Nod
 | `SortClaude-5.5-Setup.exe` (NSIS, x64 app) | ✅ built; silent install under Wine succeeded; installed app launched |
 | `SortClaude-5.5-Portable.exe` | ✅ built; PE metadata + icon verified |
 | Windows `SortClaude.exe` under Wine | ✅ boots from `app://`, reports `platform: win32`, runs a sort with live counters |
+| `SortClaude-5.5.apk` (Android, Capacitor 6) | ✅ built with Gradle; signature verified (v1 + v2); manifest/contents inspected — **not run on a device or emulator** |
 
 SHA-256 of the delivered executables:
 ```
@@ -66,6 +67,8 @@ cfe922b3e3e2447faadd61e3b3e8d01b3af38dab53499c07f4a63fa65118aa4e  SortClaude-5.5
 
 All four ended verified sorted. These numbers come from a CPU-only container, not the target laptop; a 60 FPS figure is **not** claimed.
 
+**Android APK** — `assembleRelease` succeeded (5.9 MB). `apksigner verify`: v1 and v2 signatures valid (CN=SortClaude). `aapt dump badging`: package `com.sortclaude.app`, versionName 5.5.0 / versionCode 550, label "SortClaude 5.5", minSdk 22, targetSdk 34, only the INTERNET permission. The APK contains all 63 web assets including both Web Workers and the 3D engine, and its `index.html` has no CSP meta (required for Capacitor's injected bridge). The phone layout was tested in Chromium's Pixel 7 emulation (412×915): no horizontal overflow on any page, and the visualizer, battle (prepare + play) and studio worked by tap.
+
 ## Implemented but not fully tested
 
 - **Real Windows 11**: the installer, portable exe, DPI scaling (125–200 %), native Save dialogs, output-folder export and window-state persistence were not exercised on real Windows (Wine only).
@@ -76,7 +79,8 @@ All four ended verified sorted. These numbers come from a CPU-only container, no
 - **MediaRecorder fallback** (browsers without WebCodecs): implemented, not exercised by tests (Chromium has WebCodecs).
 - **Live audio**: synthesis is unit-tested via the shared note mapping and verified in the exported file; live playback through speakers can't be heard in a headless container.
 - **Firefox / Edge**: only Chromium was automated. Edge shares Chromium's engine; Firefox (WebCodecs since v130) was not tested.
-- **Touch / phone layouts**: responsive CSS exists down to narrow widths; this is a desktop-first app and mobile was not tested.
+- **Android on a real device**: this machine has no KVM, so no emulator could run; the APK was never launched. Untested there: WebView performance, WebCodecs video export in the Android WebView, audio, the share-sheet export path (`@capacitor/filesystem` + `@capacitor/share`), back-button behaviour and rotation.
+- **Touch**: phone layout verified in Chromium device emulation only.
 
 ## Not implemented / limitations
 

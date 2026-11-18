@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SortClaude 5.5</string>
+    <string name="title_activity_main">SortClaude 5.5</string>
+    <string name="package_name">com.sortclaude.app</string>
+    <string name="custom_url_scheme">com.sortclaude.app</string>
+</resources>
