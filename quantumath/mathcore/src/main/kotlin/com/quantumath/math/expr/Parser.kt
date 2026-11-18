@@ -15,7 +15,7 @@ import java.math.BigDecimal
  *   postfix   := primary ('!' | '%' | '²' | '³')*
  *   primary   := number | constant | variable | function call | '(' sum ')' | '|' sum '|' | '√' power
  */
-class Parser(private val src: String, private val complexMode: Boolean = false) {
+class Parser(private val src: String, private val complexMode: Boolean = false, private val extraVars: Set<String> = emptySet()) {
 
     companion object {
         val FUNCTIONS = setOf(
@@ -36,6 +36,8 @@ class Parser(private val src: String, private val complexMode: Boolean = false) 
         val CONSTANTS = mapOf("pi" to "pi", "π" to "pi", "e" to "e", "phi" to "phi", "φ" to "phi", "tau" to "tau", "τ" to "tau")
 
         fun parse(text: String, complexMode: Boolean = false): Expr = Parser(text, complexMode).parseExpression()
+        /** Like [parse], but also accepts the given multi-letter variable names (e.g. "ans"). */
+        fun parse(text: String, extraVars: Set<String>, complexMode: Boolean = false): Expr = Parser(text, complexMode, extraVars).parseExpression()
         fun parseRelation(text: String): Relation = Parser(text).parseRelationTop()
     }
 
@@ -76,7 +78,9 @@ class Parser(private val src: String, private val complexMode: Boolean = false) 
                 }
                 c.isLetter() -> {
                     // longest known function/constant name at this position, else a single-letter variable
+                    val extra = extraVars.filter { s.startsWith(it, i) }.maxByOrNull { it.length }
                     val matched: String? = names.firstOrNull { s.startsWith(it, i) }
+                    if (extra != null && extra.length >= (matched?.length ?: 0)) { out += Tok(T.IDENT_VAR, extra, i); i += extra.length; continue }
                     if (complexMode && c == 'i' && (matched == null || matched.length == 1)) {
                         out += Tok(T.IDENT_CONST, "i", i); i++
                     } else if (matched != null) {

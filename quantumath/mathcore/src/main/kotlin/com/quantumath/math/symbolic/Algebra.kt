@@ -261,7 +261,7 @@ object Algebra {
                 val lin = Poly(listOf(Rational.of(-r.num), Rational.of(r.den)))
                 while (rest.degree >= 1 && rest.eval(r).isZero) { rest = rest.divMod(lin).first; }
                 factors += lin to mult
-                notes += "x = $r is a rational root (rational root theorem), so (${lin.toExpr(v)}) is a factor"
+                notes += "x = $r is a rational root (rational root theorem), so (${Printer.print(lin.toExpr(v), unicode = true)}) is a factor"
             }
             rest = rest.primitive().second
             if (rest.degree == 4) {
@@ -272,8 +272,8 @@ object Algebra {
                 factors += rest to mult
                 if (rest.degree == 2) {
                     val disc = rest[1] * rest[1] - Rational.of(4) * rest[2] * rest[0]
-                    notes += "${rest.toExpr(v)} has discriminant $disc and no rational roots, so it is irreducible over ℚ" + if (disc.signum < 0) " (complex roots)" else " (irrational real roots)"
-                } else notes += "${rest.toExpr(v)} has no rational roots; no further factorization found over ℚ"
+                    notes += "${Printer.print(rest.toExpr(v), unicode = true)} has discriminant $disc and no rational roots, so it is irreducible over ℚ" + if (disc.signum < 0) " (complex roots)" else " (irrational real roots)"
+                } else notes += "${Printer.print(rest.toExpr(v), unicode = true)} has no rational roots; no further factorization found over ℚ"
             }
         }
         // collect overall numeric factor so that product equals p
@@ -354,7 +354,7 @@ object Algebra {
         var core = num.toExpr(t)
         val notes = ArrayList<String>()
         if (content != Rational.ONE) notes += "common numeric factor $content"
-        if (mono.factors.isNotEmpty()) notes += "common factor ${MPoly(mapOf(mono to Rational.ONE)).toExpr(t)}"
+        if (mono.factors.isNotEmpty()) notes += "common factor ${Printer.print(MPoly(mapOf(mono to Rational.ONE)).toExpr(t), unicode = true)}"
         diffOfSquares(num, t)?.let { core = it; notes += "difference of squares a² − b² = (a − b)(a + b)" }
         var res: Expr = core
         if (mono.factors.isNotEmpty()) res = Expr.Mul(MPoly(mapOf(mono to Rational.ONE)).toExpr(t), res)
