@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<title>Človek in narava</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; width: 1280px; height: 720px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<script>
+/*
+  "Človek in narava" — a 150 s animated explainer drawn entirely with
+  canvas code. renderAt(t) draws the frame for time t (seconds), so the
+  video is fully deterministic. render.js captures every frame and pipes
+  them to ffmpeg.
+*/
+
+const W = 1280, H = 720;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const FONT = '"DejaVu Sans", "Liberation Sans", Arial, sans-serif';
+
+// ---------- helpers ----------
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeIO = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const hex = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+const mixArr = (c1, c2, t) => { const a = hex(c1), b = hex(c2); return a.map((v, i) => Math.round(lerp(v, b[i], clamp(t)))); };
+const mixC = (c1, c2, t) => `rgb(${mixArr(c1, c2, t).join(',')})`;
+const rgba = (arr, a) => `rgba(${arr[0]},${arr[1]},${arr[2]},${clamp(a)})`;
+const rnd = (i, k = 0) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+function rng(seed) {
+  return () => {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function rrf(x, y, w, h, r, c) { rr(x, y, w, h, r); ctx.fillStyle = c; ctx.fill(); }
+function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); }
+function circ(x, y, r, c) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); }
+function ell(x, y, rx, ry, c) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fillStyle = c; ctx.fill(); }
+function poly(pts, c) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (const p of pts.slice(1)) ctx.lineTo(p[0], p[1]);
+  ctx.closePath(); ctx.fillStyle = c; ctx.fill();
+}
+function line(x1, y1, x2, y2, c, w = 2) {
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = c; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.stroke();
+}
+function withA(a, fn) { if (a <= 0) return; ctx.save(); ctx.globalAlpha *= clamp(a); fn(); ctx.restore(); }
+function tw(s, size, weight = '700') {
+  ctx.save(); ctx.font = `${weight} ${size}px ${FONT}`; const w = ctx.measureText(s).width; ctx.restore(); return w;
+}
+function text(s, x, y, size, color = '#fff', o = {}) {
+  const { align = 'center', weight = '700', a = 1, shadow = true } = o;
+  withA(a, () => {
+    ctx.font = `${weight} ${size}px ${FONT}`;
+    ctx.textAlign = align; ctx.textBaseline = 'middle';
+    if (shadow) { ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3; }
+    ctx.fillStyle = color; ctx.fillText(s, x, y);
+  });
+}
+function sky(top, bot) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, top); g.addColorStop(1, bot);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+function hills(base, amp, color, ph = 0) {
+  ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W + 20; x += 20) {
+    const y = base - amp * (0.6 * Math.sin(x * 0.0035 + ph) + 0.4 * Math.sin(x * 0.009 + ph * 1.7));
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+function sun(x, y, r, glow = 1) {
+  const g = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 3.2);
+  g.addColorStop(0, `rgba(255,236,150,${0.55 * glow})`); g.addColorStop(1, 'rgba(255,236,150,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3.2, 0, Math.PI * 2); ctx.fill();
+  circ(x, y, r, '#ffd54f');
+}
+function cloud(x, y, s = 1, a = 1) {
+  withA(a, () => {
+    circ(x, y, 26 * s, '#fff'); circ(x + 28 * s, y - 10 * s, 32 * s, '#fff');
+    circ(x + 60 * s, y, 24 * s, '#fff'); rect(x - 4 * s, y, 66 * s + 26 * s, 24 * s, '#fff');
+  });
+}
+function pine(x, y, s, col = '#2e7d32', lean = 0) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(lean);
+  rect(-4 * s, -28 * s, 8 * s, 30 * s, '#6d4c41');
+  poly([[0, -132 * s], [-30 * s, -70 * s], [30 * s, -70 * s]], col);
+  poly([[0, -106 * s], [-42 * s, -46 * s], [42 * s, -46 * s]], col);
+  poly([[0, -82 * s], [-52 * s, -22 * s], [52 * s, -22 * s]], col);
+  ctx.restore();
+}
+function bush(x, y, s, col = '#43a047') {
+  circ(x, y - 10 * s, 14 * s, col); circ(x + 14 * s, y - 6 * s, 12 * s, col); circ(x - 14 * s, y - 6 * s, 12 * s, col);
+}
+function stump(x, y, s = 1) {
+  rect(x - 9 * s, y - 16 * s, 18 * s, 16 * s, '#6d4c41');
+  ell(x, y - 16 * s, 9 * s, 3.5 * s, '#a1887f');
+}
+function flower(x, y, c) { circ(x, y, 3, '#fff'); circ(x - 4, y - 3, 3, c); circ(x + 4, y - 3, 3, c); circ(x, y - 6, 3, c); }
+function bird(x, y, s, flap) {
+  ctx.strokeStyle = '#263238'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 12 * s, y - 7 * s * flap);
+  ctx.quadraticCurveTo(x - 5 * s, y + 2 * s, x, y);
+  ctx.quadraticCurveTo(x + 5 * s, y + 2 * s, x + 12 * s, y - 7 * s * flap);
+  ctx.stroke();
+}
+function car(x, y, color, dir = 1, s = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+  rrf(-36, -26, 72, 24, 8, color);
+  rrf(-20, -40, 40, 18, 8, color);
+  rrf(-15, -36, 12, 12, 3, '#b3e5fc'); rrf(3, -36, 12, 12, 3, '#b3e5fc');
+  circ(-20, -1, 8, '#212121'); circ(20, -1, 8, '#212121');
+  ctx.restore();
+}
+function person(x, y, s, shirt = '#ef6c00', armAng = 0, hold = null) {
+  ctx.save(); ctx.translate(x, y); ctx.lineCap = 'round';
+  ctx.strokeStyle = '#263238'; ctx.lineWidth = 4 * s;
+  line(0, -24 * s, -7 * s, -2 * s, '#263238', 4 * s);      // leg
+  line(0, -24 * s, 7 * s, -2 * s, '#263238', 4 * s);       // leg
+  line(0, -46 * s, 0, -24 * s, shirt, 9 * s);              // torso
+  const ax = Math.sin(armAng) * 12 * s, ay = Math.cos(armAng) * 12 * s;
+  line(0, -42 * s, -10 * s + ax, -30 * s + ay, '#263238', 3.5 * s); // arm
+  line(0, -42 * s, 10 * s - ax, -30 * s - ay, '#263238', 3.5 * s);  // arm
+  circ(0, -54 * s, 7 * s, '#ffcc80');
+  ctx.restore();
+}
+function frog(x, y, s = 1, col = '#43a047') {
+  ctx.save(); ctx.translate(x, y);
+  ell(-8 * s, -4 * s, 5 * s, 4 * s, col); ell(8 * s, -4 * s, 5 * s, 4 * s, col);
+  ell(0, 0, 13 * s, 8 * s, col);
+  circ(-6 * s, -9 * s, 3.8 * s, '#fff'); circ(6 * s, -9 * s, 3.8 * s, '#fff');
+  circ(-6 * s, -9 * s, 1.8 * s, '#111'); circ(6 * s, -9 * s, 1.8 * s, '#111');
+  ctx.restore();
+}
+function fish(x, y, s, dir, col = '#ffb300') {
+  ctx.save(); ctx.translate(x, y); ctx.scale(dir * s, s);
+  ell(0, 0, 14, 7, col);
+  poly([[12, 0], [24, -9], [24, 9]], col);
+  circ(-6, -2, 1.8, '#111');
+  ctx.restore();
+}
+function bottle(x, y, s = 1, col = 'rgba(160,220,255,0.9)') {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(x * 0.05) * 0.4);
+  rrf(-6 * s, -8 * s, 12 * s, 18 * s, 4 * s, col);
+  rrf(-3 * s, -13 * s, 6 * s, 6 * s, 2 * s, '#e53935');
+  ctx.restore();
+}
+// Factory: base-left at (x, y). Returns chimney tops.
+function factory(x, y, s = 1, lidOn = 0) {
+  rrf(x, y - 92 * s, 230 * s, 92 * s, 6, '#78909c');
+  for (let i = 0; i < 4; i++) rect(x + 16 * s + i * 52 * s, y - 70 * s, 30 * s, 24 * s, '#e0f7fa');
+  rrf(x + 30 * s, y - 250 * s, 26 * s, 160 * s, 3, '#607d8b');
+  rrf(x + 130 * s, y - 280 * s, 26 * s, 190 * s, 3, '#607d8b');
+  rect(x + 26 * s, y - 252 * s, 34 * s, 6 * s, '#455a64');
+  rect(x + 126 * s, y - 282 * s, 34 * s, 6 * s, '#455a64');
+  return [[x + 43 * s, y - 250 * s], [x + 143 * s, y - 280 * s]];
+}
+// Stateless smoke puffs rising from (sx, sy).
+function puffs(sx, sy, t, col, a = 0.5, n = 16, life = 4.5) {
+  for (let i = 0; i < n; i++) {
+    const age = (t + i / n * life) % life;
+    const k = age / life;
+    const x = sx + age * 22 + Math.sin(age * 1.7 + i * 2.1) * 14 * k;
+    const y = sy - age * 62;
+    const r = 10 + age * 13;
+    circ(x, y, r, rgba(col, a * (1 - k) * (1 - k * 0.3)));
+  }
+}
+function rain(t, a, x0 = 0, x1 = W, y0 = 0, y1 = H) {
+  if (a <= 0) return;
+  ctx.strokeStyle = `rgba(190,225,255,${0.7 * a})`; ctx.lineWidth = 1.6; ctx.beginPath();
+  for (let i = 0; i < 140; i++) {
+    const x = x0 + ((i * 131.7) % (x1 - x0));
+    const y = y0 + ((i * 71.3 + t * 720) % (y1 - y0));
+    ctx.moveTo(x, y); ctx.lineTo(x - 4, y + 12);
+  }
+  ctx.stroke();
+}
+function chapter(num, title, a = 1) {
+  withA(a, () => {
+    ctx.font = `700 34px ${FONT}`;
+    const w = 74 + ctx.measureText(title).width + 28;
+    rrf(36, 30, w, 60, 30, 'rgba(10,25,18,.6)');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffd54f'; ctx.fillText(num, 60, 61);
+    ctx.fillStyle = '#fff'; ctx.fillText(title, 110, 62);
+  });
+}
+function caption(s, a = 1) {
+  withA(a, () => {
+    const w = tw(s, 28, '600');
+    rrf(W / 2 - w / 2 - 26, 634, w + 52, 56, 28, 'rgba(0,0,0,.55)');
+    text(s, W / 2, 662, 28, '#fff', { weight: '600', shadow: false });
+  });
+}
+function bar(x, y, w, h, pct, fill, label) {
+  rrf(x - 14, y - 40, w + 28, h + 54, 14, 'rgba(10,25,18,.6)');
+  text(label, x + w / 2, y - 18, 22, '#fff', { weight: '700' });
+  rrf(x, y, w, h, h / 2, 'rgba(255,255,255,.35)');
+  rrf(x, y, Math.max(h, w * clamp(pct)), h, h / 2, fill);
+}
+
+// ---------- scenes ----------
+// Each scene: f(lt, dur) where lt is local time in seconds.
+
+// 0 — intro
+function s0(lt) {
+  const sunY = lerp(660, 165, easeOut(seg(lt, 0.2, 5)));
+  sky('#4fb8f0', '#e3f6ff');
+  sun(930, sunY, 52, 1);
+  cloud(180 + lt * 14, 150, 1.1, 0.95);
+  cloud(700 - lt * 9, 95, 0.8, 0.9);
+  hills(470, 90, '#8fb9a8', 0.5);
+  hills(520, 60, '#5e9c6c', 2.0);
+  const r = rng(7);
+  for (let i = 0; i < 26; i++) {
+    const x = 20 + i * 52 + r() * 18;
+    const s = easeOut(seg(lt, 0.5 + i * 0.1, 2.0 + i * 0.1)) * (0.8 + r() * 0.5);
+    pine(x, 600 + (i % 2) * 14, s, i % 3 ? '#2e7d32' : '#1b5e20', 0);
+  }
+  rect(0, 600, W, H - 600, '#4caf50');
+  for (let i = 0; i < 4; i++) {
+    const t0 = (lt * 60 + i * 300) % (W + 200) - 100;
+    bird(t0, 220 + i * 26 + Math.sin(lt * 2 + i) * 6, 1.2, Math.sin(lt * 9 + i) > 0 ? 1 : -0.4);
+  }
+  text('ČLOVEK IN NARAVA', W / 2, 290, 88, '#fff', { a: seg(lt, 1.2, 2.3) });
+  text('kako vplivamo na svet okoli nas in kako ga lahko zaščitimo', W / 2, 372, 28, '#fff', { weight: '500', a: seg(lt, 2.2, 3.2) });
+  rect(W / 2 - 120, 412, 240 * seg(lt, 2.4, 3.6), 4, '#ffd54f');
+}
+
+// 1 — forest cutting
+const FOREST = (() => {
+  const r = rng(42), arr = [];
+  for (let i = 0; i < 34; i++) {
+    const row = i % 2;
+    arr.push({ x: 40 + i * 38 + r() * 14, y: row ? 586 : 548, s: 0.9 + r() * 0.45 + row * 0.1 });
+  }
+  return arr.sort((a, b) => a.y - b.y);
+})();
+function s1(lt, d) {
+  sky('#bfe9ff', '#f0fff4');
+  hills(500, 40, '#a5d6a7', 1.1);
+  rect(0, 540, W, H - 540, '#66bb6a');
+  const mx = lerp(-200, 1420, seg(lt, 1, 13));
+  let alive = 0;
+  for (const tr of FOREST) {
+    const tf = 1 + (tr.x + 200) / 1620 * 12;
+    if (lt < tf) { alive++; pine(tr.x, tr.y, tr.s); }
+    else if (lt < tf + 0.8) {
+      const ang = easeIO(seg(lt, tf, tf + 0.8)) * Math.PI / 2;
+      pine(tr.x, tr.y, tr.s, '#2e7d32', ang);
+    } else {
+      rrf(tr.x - 6, tr.y - 22, 110 * tr.s * 0.6, 14 * tr.s, 6, '#6d4c41');
+      stump(tr.x, tr.y, tr.s * 1.2);
+    }
+  }
+  // harvester
+  const hy = 572;
+  ctx.save();
+  rrf(mx - 60, hy - 52, 120, 40, 8, '#fbc02d');
+  rrf(mx - 22, hy - 84, 48, 36, 6, '#f9a825');
+  rrf(mx - 16, hy - 78, 34, 14, 3, '#b3e5fc');
+  line(mx + 58, hy - 30, mx + 98, hy - 74, '#424242', 6);
+  circ(mx + 98, hy - 74, 15, '#90a4ae');
+  for (let k = 0; k < 4; k++) {
+    const a = lt * 22 + k * Math.PI / 2;
+    line(mx + 98, hy - 74, mx + 98 + Math.cos(a) * 13, hy - 74 + Math.sin(a) * 13, '#eceff1', 2.5);
+  }
+  circ(mx - 38, hy - 8, 17, '#212121'); circ(mx + 38, hy - 8, 17, '#212121');
+  ctx.restore();
+  const pct = alive / FOREST.length;
+  chapter('01', 'SEKANJE GOZDOV');
+  bar(W - 340, 52, 300, 24, pct, '#2e7d32', `gozd: ${Math.round(pct * 100)} %`);
+  caption('drevesa so dom za tisoče živali in zadržujejo zemljo', seg(lt, 0.8, 1.8) * (1 - seg(lt, 12.3, 13.3)));
+}
+
+// 2 — cities and roads
+function s2(lt) {
+  sky('#bfe9ff', '#f5fbff');
+  rect(0, 470, W, H - 470, '#66bb6a');
+  // untouched forest on the left
+  [[80, 1], [210, 0.9], [340, 1.1], [470, 0.95]].forEach(([x, s], i) => pine(x, 470 + (i % 2) * 8, s * 1.1));
+  // concrete zone grows from right to left
+  const cx = lerp(W, 600, easeOut(seg(lt, 0.5, 4)));
+  rect(cx, 470, W - cx, H - 470, '#b0bec5');
+  // buildings
+  const B = [[640, 90], [715, 140], [800, 70], [900, 180], [1000, 120], [1080, 210], [1170, 100]];
+  B.forEach(([x, h], i) => {
+    const g = easeOut(seg(lt, 2.5 + i * 0.45, 4.5 + i * 0.45));
+    const hh = h * g;
+    if (hh < 2) return;
+    rrf(x, 470 - hh, 62, hh, 3, ['#eceff1', '#d7ccc8', '#cfd8dc'][i % 3]);
+    for (let wy = 0; wy < hh - 14; wy += 22)
+      for (let wx = 8; wx < 56; wx += 16) rect(x + wx, 470 - hh + 10 + wy, 9, 12, '#78909c');
+  });
+  // crane
+  const cxr = 1240, sw = Math.sin(lt * 0.8) * 0.4;
+  withA(seg(lt, 3, 4), () => {
+    rect(cxr - 4, 260, 8, 210, '#ff8f00');
+    ctx.save(); ctx.translate(cxr, 260); ctx.rotate(sw);
+    rect(-120, -4, 150, 8, '#ff8f00');
+    line(-100, 4, -100, 60, '#424242', 2);
+    rect(-104, 60, 8, 6, '#424242');
+    ctx.restore();
+  });
+  // road
+  const rl = easeOut(seg(lt, 0.2, 2.5)) * W;
+  rect(0, 600, rl, 46, '#37474f');
+  for (let x = -((lt * 180) % 60); x < rl; x += 60) rect(x, 621, 30, 4, '#fff');
+  for (let i = 0; i < 4; i++) {
+    const x = (lt * 170 + i * 330) % (W + 200) - 100;
+    car(x, 620 + 22 - 52 + 26, ['#e53935', '#1e88e5', '#fdd835', '#8e24aa'][i], 1, 0.9);
+  }
+  chapter('02', 'MESTA IN CESTE');
+  caption('beton pokrije zemljo, ki je prej vpijala vodo', seg(lt, 2, 3) * (1 - seg(lt, 12.3, 13.3)));
+}
+
+// 3 — soil landslide
+const surfY = x => 250 + x / W * 330;
+function band(top, bot, col) {
+  ctx.beginPath(); ctx.moveTo(0, surfY(0) + top);
+  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, surfY(x) + top);
+  for (let x = W; x >= 0; x -= 40) ctx.lineTo(x, Math.min(H, surfY(x) + bot));
+  ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+}
+function s3(lt) {
+  sky('#bfe9ff', '#eefaff');
+  band(0, 900, '#8d6e63');
+  band(0, 22, '#4e342e');
+  band(150, 900, '#6d4c41');
+  band(260, 900, '#5d4037');
+  // trees + roots
+  for (let i = 0; i < 11; i++) {
+    const x = 90 + i * 112;
+    const k = easeIO(seg(lt, 4 + i * 0.18, 4.5 + i * 0.18));
+    const s = 1.15 * (1 - k);
+    if (s <= 0.01) continue;
+    withA(1 - k * 0.5, () => {
+      for (let r = -1; r <= 1; r++) line(x, surfY(x) + 4, x + r * 22 * s, surfY(x) + 26 * s, '#4e342e', 3);
+    });
+    pine(x, surfY(x) + 4, s);
+  }
+  // grass cover that disappears
+  // rain and slide
+  rain(lt, seg(lt, 6, 7.5), 0, W, 0, surfY(W));
+  const p = easeIO(seg(lt, 8, 11));
+  const bx = lerp(420, 1020, p), by = surfY(bx) - 22 + p * 40;
+  if (lt > 7.8 && lt < 12) {
+    ctx.save(); ctx.translate(bx, by); ctx.rotate(Math.atan(330 / W) + p * 0.3);
+    rrf(-70, -22, 140, 44, 16, '#8d6e63');
+    circ(-30, -2, 9, '#5d4037'); circ(20, 6, 12, '#5d4037'); circ(50, -8, 7, '#6d4c41');
+    ctx.restore();
+    for (let i = 0; i < 8; i++) {
+      const q = clamp(p - i * 0.05);
+      circ(lerp(420, 1020, q) + (rnd(i) - 0.5) * 60, surfY(bx) + 20 + q * 80 + rnd(i, 2) * 20, 4 + rnd(i, 3) * 5, '#795548');
+    }
+  }
+  rect(0, 650, W, H - 650, '#4fc3f7');
+  rect(0, 650, W, 6, '#29b6f6');
+  withA(seg(lt, 11, 12), () => ell(1050, 690, 160 * seg(lt, 11, 12), 26, '#8d6e63'));
+  chapter('03', 'PLAZENJE PRSTI');
+  caption('brez korenin se pobočje zlahka sesuje in zemlja zdrsne v reko', seg(lt, 1, 2) * (1 - seg(lt, 12.3, 13.3)));
+}
+
+// 4 — pollution
+function s4(lt) {
+  const p = seg(lt, 3, 9);
+  sky('#bfe9ff', '#eaf7ff');
+  rect(0, 470, W, 90, '#66bb6a');
+  const top = factory(90, 470, 1);
+  puffs(top[0][0], top[0][1], lt, [110, 110, 110], 0.55);
+  puffs(top[1][0], top[1][1], lt + 1.3, [110, 110, 110], 0.55);
+  // river that turns brown
+  rect(0, 560, W, 80, mixC('#4fc3f7', '#8d6e3f', p));
+  rect(0, 560, W, 5, 'rgba(255,255,255,.25)');
+  // sea
+  rect(0, 640, W, 80, mixC('#1565c0', '#4e6b3a', p * 0.8));
+  // pipe and outflow
+  rrf(300, 460, 14, 110, 4, '#546e7a');
+  for (let i = 0; i < 6; i++) {
+    const q = (lt * 0.7 + i / 6) % 1;
+    circ(307, 470 + q * 100, 4, rgba(mixArr('#8d6e3f', '#5d4037', 0.5), 0.6 + 0.4 * (1 - q)));
+  }
+  // fish fleeing
+  for (let i = 0; i < 4; i++) {
+    const x = (lt * 60 + i * 300) % (W + 200) - 100;
+    withA(1 - seg(lt, 6, 8.5), () => fish(x, 600 + Math.sin(lt * 2 + i) * 8, 1.2, 1));
+  }
+  // plastic in the sea
+  for (let i = 0; i < 9; i++) {
+    const x = ((i * 157 + lt * 26) % (W + 100)) - 50;
+    withA(seg(lt, 5, 7), () => bottle(x, 690 + Math.sin(lt + i) * 6, 1.4));
+  }
+  chapter('04', 'ONESNAŽEVANJE VODA IN MORJA');
+  caption('odpadne vode in plastika končajo v reki in v morju', seg(lt, 1, 2) * (1 - seg(lt, 12.3, 13.3)));
+}
+
+// 5 — invasive species
+const MAP_DOTS = (() => {
+  const r = rng(9), a = [];
+  for (let i = 0; i < 240; i++) a.push({ x: 40 + r() * 1200, y: 130 + r() * 500, r: 6 + r() * 5 });
+  return a;
+})();
+function s5(lt) {
+  sky('#e8f5e9', '#f1f8e9');
+  const R = easeOut(seg(lt, 1, 7)) * 880;
+  let native = 0;
+  for (const d of MAP_DOTS) {
+    const dist = Math.hypot(d.x - 640, d.y - 380);
+    const inv = dist < R;
+    if (!inv) native++;
+    if (inv) circ(d.x, d.y, d.r * 1.25, '#ff6d00');
+    else circ(d.x, d.y, d.r, '#43a047');
+  }
+  ctx.save(); ctx.strokeStyle = 'rgba(255,109,0,.7)'; ctx.lineWidth = 4; ctx.setLineDash([12, 10]);
+  ctx.beginPath(); ctx.arc(640, 380, R, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  circ(640, 380, 16, '#e65100');
+  chapter('05', 'TUJERODNE VRSTE');
+  bar(W - 400, 52, 360, 24, native / MAP_DOTS.length, '#43a047', `domorodne rastline: ${Math.round(native / MAP_DOTS.length * 100)} %`);
+  caption('nova vrsta brez naravnih sovražnikov izrine domače', seg(lt, 1, 2) * (1 - seg(lt, 8.3, 9.3)));
+}
+
+// 6 — road splits frogs from the pond
+function s6(lt) {
+  sky('#bfe9ff', '#eefaf0');
+  rect(0, 300, W, 420, '#7cb342');
+  pine(70, 300, 1.2); pine(160, 320, 1); pine(1220, 300, 1.1);
+  ell(960, 255, 130, 56, '#29b6f6');
+  // road
+  rect(0, 380, W, 60, '#37474f');
+  for (let x = -((lt * 120) % 50); x < W; x += 50) rect(x, 408, 26, 4, '#fff');
+  for (let i = 0; i < 6; i++) {
+    const x = (lt * 240 + i * 260) % (W + 200) - 100;
+    car(x, i % 2 ? 396 : 430, ['#e53935', '#1e88e5', '#fdd835', '#8e24aa', '#43a047', '#f4511e'][i], i % 2 ? -1 : 1, 0.85);
+  }
+  // blocked frogs: they hop toward the road and stop at its edge
+  for (let i = 0; i < 5; i++) {
+    const x = 120 + i * 70 + rnd(i) * 20;
+    const y = lerp(530, 462, easeOut(seg(lt, 1 + i * 0.25, 4 + i * 0.25)));
+    const bob = lt > 4 + i * 0.25 ? Math.abs(Math.sin(lt * 5 + i)) * 5 : 0;
+    frog(x, y - bob, 1.2);
+  }
+  // blocked route to the pond
+  withA(seg(lt, 2, 3), () => {
+    ctx.save(); ctx.setLineDash([10, 8]); ctx.strokeStyle = '#e53935'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(260, 470); ctx.lineTo(820, 280); ctx.stroke(); ctx.restore();
+    text('✕', 560, 411, 52, '#e53935', { weight: '900', shadow: false });
+  });
+  chapter('06', 'CESTA LOČI ŽABE OD MLAKE');
+  caption('žabe ne morejo čez cesto do mlake, kjer se razmnožujejo', seg(lt, 1, 2) * (1 - seg(lt, 8.3, 9.3)));
+}
+
+// 7 — choosing the least harmful route
+function pathPts(pts, prog) {
+  // draw a polyline revealed up to prog (0..1)
+  let total = 0; const L = [];
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); L.push(l); total += l; }
+  let rem = total * prog;
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) {
+    if (rem >= L[i - 1]) { ctx.lineTo(pts[i][0], pts[i][1]); rem -= L[i - 1]; }
+    else { const f = rem / L[i - 1]; ctx.lineTo(lerp(pts[i - 1][0], pts[i][0], f), lerp(pts[i - 1][1], pts[i][1], f)); break; }
+  }
+}
+const ROUTES = [
+  { name: 'škoda: velika', col: '#e53935', y: 448, pts: [[100, 350], [400, 380], [640, 420], [900, 380], [1180, 350]] },
+  { name: 'škoda: srednja', col: '#fb8c00', y: 110, pts: [[100, 350], [300, 250], [640, 150], [1000, 200], [1180, 350]] },
+  { name: 'škoda: majhna', col: '#2e7d32', y: 690, pts: [[100, 350], [350, 520], [640, 600], [930, 520], [1180, 350]] },
+];
+function s7(lt) {
+  sky('#dcedc8', '#f1f8e9');
+  // landscape
+  ell(300, 200, 120, 90, '#2e7d32'); ell(1000, 580, 130, 100, '#2e7d32'); ell(700, 130, 80, 50, '#388e3c');
+  rrf(120, 470, 170, 110, 6, '#fff59d'); rect(120, 470, 170, 4, '#f9a825');
+  rrf(930, 230, 170, 100, 6, '#ffe082');
+  ell(640, 390, 150, 90, '#81d4fa'); ell(640, 390, 110, 60, '#4fc3f7');
+  for (let i = 0; i < 12; i++) line(520 + i * 20, 410 + (i % 3) * 10, 524 + i * 20, 400 + (i % 3) * 10, '#558b2f', 3);
+  circ(100, 350, 16, '#3949ab'); circ(1180, 350, 16, '#3949ab');
+  text('mesto A', 100, 320, 24, '#1a237e', { weight: '700', shadow: false });
+  text('mesto B', 1180, 320, 24, '#1a237e', { weight: '700', shadow: false });
+  // routes reveal one after another
+  ROUTES.forEach((r, i) => {
+    const prog = easeOut(seg(lt, 0.5 + i * 1.1, 2.1 + i * 1.1));
+    const fade = i < 2 ? 1 - seg(lt, 7, 8) * 0.8 : 1;
+    withA(fade, () => {
+      ctx.save(); ctx.strokeStyle = r.col; ctx.lineWidth = i === 2 && lt > 7 ? 12 : 7;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      pathPts(r.pts, prog); ctx.stroke(); ctx.restore();
+    });
+    withA(seg(lt, 3.5 + i * 0.3, 4.3 + i * 0.3) * fade, () => text(r.name, 640, r.y, 26, r.col, { weight: '800' }));
+  });
+  // check mark on the chosen route
+  withA(seg(lt, 7.5, 8.3), () => {
+    circ(640, 620, 34, '#2e7d32');
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath();
+    ctx.moveTo(624, 620); ctx.lineTo(636, 634); ctx.lineTo(660, 606); ctx.stroke();
+  });
+  chapter('07', 'ISKANJE NAJMANJ ŠKODLJIVE POTI');
+  caption('cesto speljemo tam, kjer naredi čim manj škode', seg(lt, 8, 9) * (1 - seg(lt, 9.8, 10)));
+}
+
+// 8 — overpass and underpass
+function deer(x, y, s, legA) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  const legs = [[-16, 0], [-10, 0], [12, 0], [18, 0]];
+  ctx.strokeStyle = '#6d4c41'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  [-14, -6, 10, 16].forEach((lx, i) => line(lx, -6, lx + Math.sin(legA + i * 1.6) * 6, 12, '#6d4c41', 4));
+  ell(0, -14, 24, 12, '#a1887f');
+  line(18, -20, 26, -36, '#a1887f', 6);
+  circ(28, -40, 8, '#a1887f');
+  line(24, -46, 20, -62, '#8d6e63', 2.5); line(20, -62, 14, -66, '#8d6e63', 2.5);
+  line(32, -46, 36, -62, '#8d6e63', 2.5); line(36, -62, 42, -66, '#8d6e63', 2.5);
+  ctx.restore();
+}
+function s8(lt) {
+  sky('#bfe9ff', '#f0fff4');
+  sun(1180, 110, 40, 0.8);
+  hills(430, 70, '#a5d6a7', 0.3);
+  rect(0, 470, W, H - 470, '#66bb6a');
+  // road
+  rect(0, 520, W, 64, '#37474f');
+  for (let x = -((lt * 150) % 50); x < W; x += 50) rect(x, 550, 26, 4, '#fff');
+  for (let i = 0; i < 4; i++) {
+    const x = (lt * 200 + i * 340) % (W + 200) - 100;
+    car(x, 548 + 0, ['#e53935', '#1e88e5', '#fdd835', '#8e24aa'][i], 1, 0.8);
+  }
+  // overpass (over the road, x 380-900)
+  rect(380, 470, 18, 50, '#90a4ae'); rect(882, 470, 18, 50, '#90a4ae');
+  rrf(360, 418, 560, 30, 4, '#b0bec5');
+  rect(360, 448, 560, 6, '#78909c');
+  for (let x = 380; x < 900; x += 40) bush(x, 418, 1.1, '#2e7d32');
+  pine(420, 418, 0.8); pine(860, 418, 0.8);
+  const deerX = lerp(360, 900, seg(lt, 1.5, 8));
+  withA(seg(lt, 1.2, 1.8) * (1 - seg(lt, 8, 8.8)), () => deer(deerX, 420, 1, lt * 10));
+  text('nadhod', 640, 384, 26, '#1b5e20', { shadow: false });
+  // underpass (x 940-1220): soil block with a tunnel under the road
+  rect(940, 584, 280, 136, '#8d6e63');
+  rrf(1000, 614, 170, 106, 52, '#3e2723');
+  rect(940, 584, 280, 10, '#5d4037');
+  text('podhod', 1085, 646, 26, '#fff', { shadow: false, a: seg(lt, 1, 2) });
+  // frogs and a hedgehog walking through the tunnel
+  for (let i = 0; i < 3; i++) {
+    const x = lerp(1000, 1200, ((lt * 0.35 + i * 0.33) % 1));
+    withA(seg(lt, 0.8, 1.6), () => frog(x, 680 + i * 16 * 0.5 - (i % 2) * 6, 1));
+  }
+  // hedgehog and fox on the overpass side
+  withA(seg(lt, 6, 7), () => { ell(300 + lt * 10, 712, 16, 10, '#8d6e63'); });
+  chapter('08', 'NADHODI IN PODHODI ZA ŽIVALI');
+  caption('živali varno prečkajo cesto, avtomobili pa jih ne pregazijo', seg(lt, 0.8, 1.8) * (1 - seg(lt, 9.8, 10.8)));
+}
+
+// 9 — planting trees
+const PLANT = (() => { const a = []; for (let i = 0; i < 14; i++) a.push({ x: 90 + i * 84, t: 0.6 + i * 0.44 }); return a; })();
+function s9(lt) {
+  sky('#e3f6ff', '#f5fff5');
+  rect(0, 430, W, H - 430, '#8d6e63');
+  rect(0, 430, W, 14, '#66bb6a');
+  for (let x = 0; x < W; x += 30) rect(x, 426, 16, 8, '#81c784');
+  // planter
+  const px = lerp(40, 1240, seg(lt, 0.5, 6.5));
+  const digging = Math.sin(lt * 8) * 0.7;
+  for (const p of PLANT) {
+    if (lt >= p.t) {
+      const g = easeOut(seg(lt, p.t, p.t + 1.6));
+      if (g > 0) pine(p.x, 430, 0.2 + g * 0.5);
+    }
+  }
+  person(px, 430, 1.25, '#f4511e', digging);
+  line(px + 8, 430 - 30, px + 26, 430 + 6, '#5d4037', 4); // shovel handle
+  rrf(px + 22, 430 + 2, 12, 12, 3, '#90a4ae');
+  // counter
+  const n = Math.round(seg(lt, 0.5, 6.5) * 1250);
+  chapter('09', 'SAJENJE DREVES');
+  rrf(W - 390, 52, 350, 60, 14, 'rgba(10,25,18,.6)');
+  text(`posajena drevesa: ${n.toLocaleString('sl-SI')}`, W - 215, 82, 26, '#c8e6c9', { shadow: false });
+  caption('vsako posajeno drevo šteje', seg(lt, 0.5, 1.5) * (1 - seg(lt, 6.2, 7)));
+}
+
+// 10 — river cleaning
+const TRASH = (() => { const r = rng(21), a = []; for (let i = 0; i < 26; i++) a.push({ x: 60 + r() * 1150, y: 300 + r() * 170, k: r() > 0.5 ? 'b' : 'g' }); return a; })();
+function s10(lt) {
+  sky('#e3f6ff', '#f5fff5');
+  rect(0, 240, W, 260, mixC('#8d6e3f', '#4fc3f7', seg(lt, 0.8, 4.5)));
+  rect(0, 240, W, 8, '#66bb6a');
+  rect(0, 500, W, H - 500, '#66bb6a');
+  for (let i = 0; i < 4; i++) rect(i * 300 + 50, 504, 20, 20, '#81c784');
+  const boatX = lerp(-120, W + 120, easeIO(seg(lt, 0.5, 5.5)));
+  let left = 0;
+  for (const t of TRASH) {
+    const x = t.x + Math.sin(lt * 0.9 + t.y) * 6;
+    if (x > boatX + 60) {
+      left++;
+      if (t.k === 'b') bottle(x, t.y, 2.2);
+      else { ell(x, t.y, 16, 11, '#e0e0e0'); ell(x + 6, t.y - 4, 6, 4, '#bdbdbd'); }
+    }
+  }
+  // boat with net
+  withA(1, () => {
+    poly([[boatX - 90, 370], [boatX + 90, 370], [boatX + 70, 400], [boatX - 70, 400]], '#ff7043');
+    rect(boatX - 2, 300, 4, 70, '#6d4c41');
+    person(boatX - 20, 370, 1.1, '#1e88e5', Math.sin(lt * 6) * 0.9);
+    line(boatX + 30, 372, boatX + 110, 316, '#6d4c41', 5);
+    ctx.strokeStyle = '#90a4ae'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(boatX + 115, 318, 22, 0, Math.PI); ctx.stroke();
+  });
+  chapter('10', 'ČIŠČENJE REK IN MORJA');
+  rrf(W - 330, 52, 290, 60, 14, 'rgba(10,25,18,.6)');
+  text(`odpadki v reki: ${left}`, W - 185, 82, 26, '#c8e6c9', { shadow: false });
+  caption('odpadke pobiramo iz rek in morja, voda se spet bistri', seg(lt, 0.8, 1.6) * (1 - seg(lt, 5.4, 6)));
+}
+
+// 11 — filters in factories
+function s11(lt) {
+  const lvl = seg(lt, 2.5, 3.6);
+  sky('#bfe9ff', '#eaf7ff');
+  rect(0, 470, W, 250, '#66bb6a');
+  const tops = factory(380, 470, 1.25);
+  const col = mixArr('#454545', '#e3f2fd', lvl);
+  puffs(tops[0][0], tops[0][1] - 12, lt, col, 0.55 * (1 - 0.6 * lvl));
+  puffs(tops[1][0], tops[1][1] - 12, lt + 1.3, col, 0.55 * (1 - 0.6 * lvl));
+  // filters dropping into the chimney mouths
+  const drop = (1 - easeOut(seg(lt, 1.2, 2.2))) * -90;
+  for (const [fx, fy] of tops) {
+    const x = fx - 22, y = fy - 16 + drop;
+    rrf(x, y, 44, 16, 3, '#263238');
+    for (let k = 0; k < 6; k++) rect(x + 4 + k * 7, y + 2, 2, 12, 'rgba(176,190,197,.9)');
+  }
+  chapter('11', 'FILTRI V TOVARNAH');
+  const note = lvl > 0.5 ? 'čist izpust' : 'dim in strupi';
+  text(note, 640, 200, 44, lvl > 0.5 ? '#1565c0' : '#424242', { a: seg(lt, 2, 2.6) * (1 - seg(lt, 6.2, 6.8)), shadow: false });
+  caption('filtri zadržijo dim, prah in strupe, še preden pridejo v zrak', seg(lt, 0.8, 1.8) * (1 - seg(lt, 6.2, 7)));
+}
+
+// 12 — protecting animals
+function animal(kind, x, y, s = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+  if (kind === 'deer') {
+    ell(0, 0, 22, 12, '#a1887f'); line(18, -6, 28, -22, '#a1887f', 6); circ(30, -26, 8, '#a1887f');
+    line(26, -32, 22, -46, '#6d4c41', 3); line(34, -32, 38, -46, '#6d4c41', 3);
+    [-12, -4, 10, 16].forEach(lx => line(lx, 8, lx, 22, '#6d4c41', 4));
+  } else if (kind === 'bird') {
+    ell(0, 0, 14, 9, '#78909c'); poly([[-6, -2], [-24, -14], [-16, 4]], '#546e7a');
+    poly([[12, -2], [22, 0], [12, 3]], '#ffb300'); circ(8, -4, 2, '#111');
+  } else if (kind === 'frog') {
+    frog(0, 0, 1.4);
+  } else if (kind === 'fox') {
+    poly([[-22, 0], [-40, -10], [-30, 8]], '#ef6c00');
+    ell(0, 0, 22, 12, '#ef6c00'); poly([[14, -6], [26, -18], [22, 2]], '#ef6c00'); circ(22, -4, 2.2, '#111');
+    poly([[24, -14], [26, -28], [32, -12]], '#ef6c00');
+    [-12, 10].forEach(lx => line(lx, 8, lx, 20, '#bf360c', 4));
+  } else {
+    circ(0, 0, 16, '#8d6e63');
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; line(Math.cos(a) * 14, Math.sin(a) * 14, Math.cos(a) * 22, Math.sin(a) * 22, '#4e342e', 2.5); }
+    circ(14, 4, 4, '#3e2723');
+  }
+  ctx.restore();
+}
+function s12(lt) {
+  sky('#e3f6ff', '#f5fff5');
+  rect(0, 470, W, H - 470, '#66bb6a');
+  const cx = 640, cy = 340;
+  const pulse = 1 + Math.sin(lt * 3) * 0.03;
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(pulse, pulse);
+  ctx.beginPath();
+  ctx.moveTo(-70, -80); ctx.lineTo(70, -80); ctx.lineTo(70, 0);
+  ctx.quadraticCurveTo(70, 60, 0, 88); ctx.quadraticCurveTo(-70, 60, -70, 0); ctx.closePath();
+  ctx.fillStyle = '#1e88e5'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(-28, -2); ctx.lineTo(-6, 22); ctx.lineTo(34, -26); ctx.stroke();
+  ctx.restore();
+  const names = ['jelen', 'ptica', 'žaba', 'lisica', 'ježek'];
+  names.forEach((nm, i) => {
+    const a = i / 5 * Math.PI * 2 + lt * 0.35;
+    const x = cx + Math.cos(a) * 300, y = cy + Math.sin(a) * 180 + 40;
+    animal(['deer', 'bird', 'frog', 'fox', 'hedge'][i], x, y, 1.3);
+    text(nm, x, y + 46, 22, '#1b5e20', { shadow: false, weight: '700' });
+  });
+  chapter('12', 'VARUJMO ŽIVALI');
+  caption('varujemo živali in njihove domove, ker so del iste narave', seg(lt, 0.8, 1.8) * (1 - seg(lt, 4.8, 5.8)));
+}
+
+// 13 — people carry frogs over the road to the pond
+const RESCUE_PATH = [[150, 520], [290, 470], [290, 350], [700, 330], [880, 300]];
+function alongPath(pts, p) {
+  const L = []; let tot = 0;
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); L.push(l); tot += l; }
+  let rem = tot * clamp(p);
+  for (let i = 1; i < pts.length; i++) {
+    if (rem <= L[i - 1]) {
+      const f = rem / L[i - 1];
+      return { x: lerp(pts[i - 1][0], pts[i][0], f), y: lerp(pts[i - 1][1], pts[i][1], f), dir: pts[i][0] >= pts[i - 1][0] ? 1 : -1, seg: i };
+    }
+    rem -= L[i - 1];
+  }
+  const e = pts[pts.length - 1]; return { x: e[0], y: e[1], dir: 1, seg: pts.length - 1 };
+}
+function s13(lt) {
+  const red = lt < 10;
+  sky('#bfe9ff', '#eefaf0');
+  rect(0, 300, W, 420, '#7cb342');
+  rect(0, 440, W, 280, '#8bc34a');
+  // pond
+  ell(960, 255, 130, 56, '#29b6f6');
+  // eggs and tadpoles after release
+  withA(seg(lt, 10.6, 11.6), () => {
+    for (let i = 0; i < 16; i++) circ(900 + (i % 4) * 16 + rnd(i) * 6, 240 + Math.floor(i / 4) * 10, 4, '#e1f5fe');
+    for (let i = 0; i < 5; i++) ell(930 + i * 20 + Math.sin(lt * 3 + i) * 10, 280 + Math.sin(lt + i) * 6, 5, 3, '#263238');
+  });
+  // road
+  rect(0, 380, W, 60, '#37474f');
+  for (let x = 0; x < W; x += 50) rect(x, 408, 26, 4, '#fff');
+  // crosswalk
+  for (let k = 0; k < 6; k++) rect(262 + k * 12, 380, 6, 60, 'rgba(255,255,255,.9)');
+  // traffic light
+  rrf(232, 300, 26, 70, 6, '#263238');
+  circ(245, 312, 7, red ? '#e53935' : '#4a1d1d'); circ(245, 330, 7, '#4a3d1d'); circ(245, 348, 7, red ? '#1b3d1f' : '#66bb6a');
+  // cars queued at the stop line (x < 260), then go on green
+  for (let i = 0; i < 3; i++) {
+    const stopX = 230 - i * 80;
+    const x = stopX + (lt > 10 ? (lt - 10) * 380 * (1 + i * 0.1) : 0);
+    car(x, 396, ['#1e88e5', '#fdd835', '#e53935'][i], 1, 0.85);
+  }
+  // people with buckets
+  const people = [{ off: 0, shirt: '#ef6c00' }, { off: 0.35, shirt: '#8e24aa' }];
+  people.forEach((pp, i) => {
+    const p = clamp((lt - 2.5 - pp.off) / 6.6);
+    const q = alongPath(RESCUE_PATH, p);
+    const walking = p < 1;
+    const bob = walking ? Math.abs(Math.sin(lt * 9 + i)) * 3 : 0;
+    const armA = walking ? Math.sin(lt * 9 + i) * 0.5 : 0;
+    ctx.save(); ctx.translate(0, 0);
+    person(q.x, q.y - bob, 1.15, pp.shirt, armA);
+    // bucket in hands
+    const bx = q.x + 12 * q.dir, by = q.y - 14 - bob;
+    poly([[bx - 12, by - 10], [bx + 12, by - 10], [bx + 9, by + 10], [bx - 9, by + 10]], '#42a5f5');
+    rect(bx - 14, by - 13, 28, 4, '#1e88e5');
+    // frogs jumping inside the bucket
+    if (lt < 10.5) {
+      for (let k = 0; k < 2; k++) frog(bx - 5 + k * 9, by - 8 + Math.abs(Math.sin(lt * 7 + k + i * 2)) * -6, 0.6);
+    }
+    ctx.restore();
+  });
+  // frogs leaving the buckets and hopping into the pond
+  for (let i = 0; i < 4; i++) {
+    const s0 = 9.6 + i * 0.3, p = seg(lt, s0, s0 + 1.0);
+    if (p > 0 && p < 1) {
+      const x = lerp(880, 930 + i * 14, p), y = lerp(300, 262, p) - Math.sin(p * Math.PI) * 60;
+      frog(x, y, 1);
+    }
+  }
+  // signs
+  withA(seg(lt, 3, 3.6), () => text('ljudje nosijo žabe čez cesto', 640, 116, 40, '#1b5e20', { shadow: false }));
+  chapter('13', 'LJUDJE POMAGAJO ŽABAM');
+  caption('z vedri prenesejo žabe čez cesto do mlake, kjer lahko zarodijo', seg(lt, 0.8, 1.8) * (1 - seg(lt, 11.3, 12)));
+}
+
+// 14 — ending
+const END_TREES = (() => { const r = rng(88), a = []; for (let i = 0; i < 28; i++) a.push({ x: 20 + i * 47 + r() * 16, s: 0.8 + r() * 0.6, t: r() * 3.5 }); return a; })();
+function s14(lt) {
+  sky('#9be7ff', '#f1fff7');
+  sun(1120, 130, 46, 1);
+  cloud(300 + lt * 10, 120, 1, 0.9);
+  hills(470, 70, '#8bc34a', 1.2);
+  for (const t of END_TREES) {
+    const g = easeOut(seg(lt, t.t, t.t + 2.5));
+    if (g > 0) pine(t.x, 580 + (t.x % 3) * 6, t.s * g * 1.2, '#2e7d32');
+  }
+  rect(0, 590, W, H - 590, '#66bb6a');
+  for (let i = 0; i < 14; i++) flower(60 + i * 90 + rnd(i) * 30, 630 + rnd(i, 2) * 40, ['#ffd54f', '#f48fb1', '#fff176'][i % 3]);
+  // river turns clear and blue
+  rect(0, 660, W, 60, mixC('#8d6e3f', '#29b6f6', seg(lt, 0.5, 4)));
+  // birds
+  for (let i = 0; i < 4; i++) bird((lt * 50 + i * 310) % (W + 200) - 100, 200 + i * 24, 1.3, Math.sin(lt * 8 + i) > 0 ? 1 : -0.4);
+  withA(seg(lt, 4.5, 5.5), () => {
+    const w = tw('narava se vrača, če ji damo priložnost', 52) + 60;
+    rrf(W / 2 - w / 2, 290, w, 80, 20, 'rgba(10,25,18,.6)');
+    text('narava se vrača, če ji damo priložnost', W / 2, 330, 52, '#fff');
+  });
+  withA(seg(lt, 7, 8), () => {
+    const s = 'začni z malim: posadi drevo, pobiri smeti, pazi na žabe na cesti';
+    const w = tw(s, 26, '600') + 50;
+    rrf(W / 2 - w / 2, 384, w, 52, 18, 'rgba(10,25,18,.6)');
+    text(s, W / 2, 410, 26, '#fff', { weight: '600' });
+  });
+  withA(seg(lt, 9, 10), () => {
+    const s = 'hvala, ker skrbiš za naravo';
+    const w = tw(s, 30) + 50;
+    rrf(W / 2 - w / 2, 448, w, 52, 18, 'rgba(10,25,18,.6)');
+    text(s, W / 2, 474, 30, '#ffd54f', { weight: '700' });
+  });
+}
+
+const SCENES = [
+  { d: 7, f: s0 }, { d: 14, f: s1 }, { d: 13, f: s2 }, { d: 13, f: s3 },
+  { d: 14, f: s4 }, { d: 9, f: s5 }, { d: 10, f: s6 }, { d: 10, f: s7 },
+  { d: 11, f: s8 }, { d: 7, f: s9 }, { d: 6, f: s10 }, { d: 7, f: s11 },
+  { d: 6, f: s12 }, { d: 12, f: s13 }, { d: 11, f: s14 },
+];
+let acc = 0;
+for (const s of SCENES) { s.start = acc; acc += s.d; }
+const TOTAL = acc; // 150 s
+
+function renderAt(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  let idx = SCENES.findIndex(s => t >= s.start && t < s.start + s.d);
+  if (idx < 0) idx = SCENES.length - 1;
+  const sc = SCENES[idx];
+  const lt = t - sc.start;
+  sc.f(lt, sc.d);
+  // dip to black between scenes
+  const F = 0.45;
+  let dark = 0;
+  if (lt < F) dark = Math.max(dark, 1 - lt / F);
+  if (sc.d - lt < F) dark = Math.max(dark, 1 - (sc.d - lt) / F);
+  if (idx === SCENES.length - 1) dark = Math.max(0, 1 - lt / F) * (lt < F ? 1 : 0);
+  if (idx === SCENES.length - 1 && lt > sc.d - 1.2) dark = Math.max(dark, 1 - (sc.d - lt) / 1.2);
+  if (dark > 0) { ctx.fillStyle = `rgba(0,0,0,${clamp(dark)})`; ctx.fillRect(0, 0, W, H); }
+  // thin progress bar
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillRect(0, H - 5, W * (t / TOTAL), 5);
+}
+window.renderAt = renderAt;
+window.TOTAL = TOTAL;
+</script>
+</body>
+</html>
