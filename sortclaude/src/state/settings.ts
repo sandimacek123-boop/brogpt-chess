@@ -36,7 +36,7 @@ export const VIZ_2D: { id: Viz2D; name: string; hint: string }[] = [
 export const VIZ_3D: { id: Viz3D; name: string; hint: string }[] = [
   { id: 'towers', name: '3D Towers', hint: 'Instanced boxes on a line; height = value.' },
   { id: 'helix', name: '3D Helix', hint: 'Double helix; index = turn position, value = radius and colour.' },
-  { id: 'galaxy', name: 'Particle Galaxy', hint: 'Spiral arms; index = arm position, value = radius.' },
+  { id: 'galaxy', name: 'Particle Galaxy', hint: 'Index = position along a spiral arm; value − index = displacement off the arm. Sorted = crisp arms.' },
   { id: 'torus', name: 'Rotating Torus', hint: 'Elements wrap around a torus; value = tube offset.' },
   { id: 'tunnel', name: 'Geometric Tunnel', hint: 'Rings along depth; value = ring radius.' },
   { id: 'vortex', name: 'Sorting Vortex', hint: 'Funnel: index = angle and depth, value = radius.' },

@@ -309,11 +309,15 @@ export class Renderer3D {
           break;
         }
         case 'galaxy': {
+          // index = position along a spiral arm; (value − index) = displacement off the arm,
+          // so an unsorted array is a diffuse cloud and a sorted one collapses into clean arms
           const arms = 3;
           const arm = i % arms;
-          const rr = 0.4 + v * 7;
-          const th = rr * 0.75 + (arm / arms) * TAU + time * 0.05 + (hash01(id) - 0.5) * 0.25;
-          pos.set(Math.cos(th) * rr, (hash01(id * 7 + 3) - 0.5) * (1.2 - v * 0.8), Math.sin(th) * rr);
+          const along = 0.4 + u * 7;
+          const off = (v - u) * 7;
+          const rr = Math.max(0.15, along + off * 0.85);
+          const th = along * 0.75 + (arm / arms) * TAU + time * 0.05 + off * 0.35 + (hash01(id) - 0.5) * 0.08;
+          pos.set(Math.cos(th) * rr, (hash01(id * 7 + 3) - 0.5) * (0.25 + Math.abs(off) * 0.5), Math.sin(th) * rr);
           scaleX = scaleY = scaleZ = 0.25 * size;
           break;
         }

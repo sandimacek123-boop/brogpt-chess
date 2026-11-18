@@ -7,7 +7,7 @@ Environment used for building and testing: Linux container (4 vCPU, no GPU), Nod
 | Check | Result |
 |---|---|
 | `npm run build` (strict TypeScript + Vite production build) | ✅ passes, 0 type errors, `dist/` ≈ 2.4 MB |
-| Unit tests (`npm test`) | ✅ 249 / 249 |
+| Unit tests (`npm test`) | ✅ 258 / 258 |
 | Browser acceptance tests (`npx playwright test`) | ✅ 6 / 6 |
 | Linux Electron build driven by Playwright | ✅ (see Desktop) |
 | `SortClaude-5.5-Setup.exe` (NSIS, x64 app) | ✅ built; silent install under Wine succeeded; installed app launched |
@@ -16,16 +16,18 @@ Environment used for building and testing: Linux container (4 vCPU, no GPU), Nod
 
 SHA-256 of the delivered executables:
 ```
-e804dc9929214f9c6efc80b8b78c3d8a1defeda6760ba86210f72858ae472dca  SortClaude-5.5-Setup.exe
-7aee0bbdd42e57e8e00e04c4aec17b6ae2b48c9641cc8fb0915d63ce9318ba8e  SortClaude-5.5-Portable.exe
+ce6a02d40f7ffd83caf674f0dac6bceb551d742394ff1c7a90cb1e5ccf91b5c6  SortClaude-5.5-Setup.exe
+cfe922b3e3e2447faadd61e3b3e8d01b3af38dab53499c07f4a63fa65118aa4e  SortClaude-5.5-Portable.exe
 ```
 
 ## Implemented and tested
 
 **Sorting engine (unit tests)**
-- 67 algorithms sorted correctly on: empty, single, two-element (sorted / reversed / equal), sorted, reversed, random permutation, heavy duplicates, all-equal, negatives, values near ±2.1·10⁹, and odd/power-of-two sizes; plus all 19 generated patterns at three sizes each (up to 5,003 elements).
+- 68 algorithms sorted correctly on: empty, single, two-element (sorted / reversed / equal), sorted, reversed, random permutation, heavy duplicates, all-equal, negatives, values near ±2.1·10⁹, and odd/power-of-two sizes; plus all 19 generated patterns at three sizes each (up to 5,003 elements).
 - Multiset preservation verified by element identity (every final array is a permutation of the input IDs).
-- Stability verified for **all 22 algorithms marked stable**, over 6 duplicate densities each.
+- Stability verified for **all 23 algorithms marked stable**, over 6 duplicate densities each.
+- **Block Merge Sort** additionally fuzzed on 300 random inputs (n up to 40,000, 1 to n distinct keys, negatives): always sorted, a permutation, and stable; comparison growth from n = 16k → 64k stays ≈ n log n on all 19 patterns.
+- **TimSort galloping mode** tested on interleaved and block-interleaved runs, mixed ascending/descending/duplicate runs (60 random cases): sorted and stable; on block-interleaved runs the merge phase uses < n/3 comparisons (a linear merge needs ≈ n).
 - Record mode and count-only mode produce identical comparison/swap/write counts.
 - Bubble sort on [3,2,1] yields exactly 3 comparisons, 3 swaps, 6 writes, 12 reads (documented convention); Merge Sort comparisons fall within [½·n·log₂n, n·log₂n].
 - Safety limits: over-limit element counts are rejected with a message; runaway Bogo Sort stops at the op limit.
@@ -44,6 +46,8 @@ e804dc9929214f9c6efc80b8b78c3d8a1defeda6760ba86210f72858ae472dca  SortClaude-5.5
 **Tournament (unit)** — 4-player elimination advances winners correctly; champion is the comparison-minimal algorithm; round robin awards 3/1/0 points (three n(n−1)/2 algorithms → all draws).
 
 **Custom algorithm sandbox** — correct code verified sorted and lossless; a data-destroying example is caught ("Elements were lost"); an infinite loop is stopped by the operation budget; `fetch`, `XMLHttpRequest` and `importScripts` are `undefined` inside the sandbox.
+
+**Video export at full spec** — TikTok Rainbow Sort at **1080×1920, 60 FPS**: H.264, 1,170 frames, 19.50 s, Opus audio (mean −25.1 dB), full decode OK, rendered in 99 s. **3D** Galaxy Sort at **1920×1080, 30 FPS**: H.264, 615 frames, 20.50 s, audio, full decode OK, frames show the 3D galaxy with bloom.
 
 **Video export** — Neon Spiral preset at 720×1280, 30 FPS with audio: progress UI shown, file downloaded, valid MP4 container, result reports 720×1280 and "with audio". An independent check with `ffprobe`/`ffmpeg` on an exported file: H.264 720×1280 @ 30 fps, 615 frames, 20.50 s; Opus 48 kHz stereo, 20.52 s; full decode without errors; audio mean −23.8 dB / peak −9.9 dB (not silent); extracted frames show the real Quick Sort progression and the outro.
 
@@ -64,10 +68,11 @@ All four ended verified sorted. These numbers come from a CPU-only container, no
 
 ## Implemented but not fully tested
 
-- **Real Windows 11**: the installer, portable exe, DPI scaling (125–200 %), native Save dialogs, output-folder export and window-state persistence were not exercised on real Windows (Wine only). Under Wine the **Space Grotesk** display font (brand and title text) did not render, while Inter and JetBrains Mono did; it renders correctly in Chromium and Linux Electron, so this is most likely a Wine font-stack issue, but it is unverified on Windows.
+- **Real Windows 11**: the installer, portable exe, DPI scaling (125–200 %), native Save dialogs, output-folder export and window-state persistence were not exercised on real Windows (Wine only).
+- **Fonts on Windows**: under Wine, stylesheet `@font-face` loads failed (all bundled fonts reported `error`) although the same files fetched and decoded fine. A self-healing loader (`src/fonts.ts`) now re-registers any failed UI font through the `FontFace` API; with it, the Windows build under Wine renders Space Grotesk, Inter and JetBrains Mono correctly. Whether real Windows needs the fallback at all is unverified.
 - **AAC audio**: not available in the Linux Chromium/Electron builds, so MP4 exports use Opus audio there. On Windows, Chromium normally provides AAC through Media Foundation; the app probes at runtime and picks AAC when supported. Not verified.
-- **Video export at 1080p/1440p/4K and 60 FPS**: encoder support for 1080×1920@60 was confirmed via `isConfigSupported`; full-length files at those sizes were not rendered in tests (720p30 was).
-- **3D**: all 10 modes render under software WebGL; bloom/trails/shadows quality and frame rate on a real GPU were not measured. Exporting 3D clips uses a second WebGL context and was only visually checked in the preview.
+- **Video export at 1440p / 4K**: not rendered in tests (720p30, 1080p60 and 1080p30-3D were). Support is probed per configuration at runtime.
+- **3D**: all 10 modes render under software WebGL and a 3D clip exported correctly; bloom/trails/shadows quality and frame rate on a real GPU were not measured.
 - **MediaRecorder fallback** (browsers without WebCodecs): implemented, not exercised by tests (Chromium has WebCodecs).
 - **Live audio**: synthesis is unit-tested via the shared note mapping and verified in the exported file; live playback through speakers can't be heard in a headless container.
 - **Firefox / Edge**: only Chromium was automated. Edge shares Chromium's engine; Firefox (WebCodecs since v130) was not tested.
@@ -75,8 +80,7 @@ All four ended verified sorted. These numbers come from a CPU-only container, no
 
 ## Not implemented / limitations
 
-- **Block Merge Sort** (WikiSort/GrailSort) is not included — no implementation could be verified to the required standard in this session.
-- **TimSort** omits the adaptive in-merge galloping mode (documented in-app).
+- **Block Merge Sort** uses an O(√n) external buffer (WikiSort's cache-assisted mode), not the fully in-place O(1)-memory internal-buffer variant.
 - **Pseudocode line highlighting** is intentionally not shown: ops are instrumented at the array-primitive level, not per source line.
 - **FFmpeg integration** for the desktop app was not added; export uses Chromium's WebCodecs encoders in both the website and the desktop app.
 - **Code signing**: the executables are unsigned, so Windows SmartScreen will warn on first launch ("More info → Run anyway").

@@ -207,12 +207,13 @@ export function symMergeSort(m: Machine): void {
  * TimSort (Peters 2002) as in CPython/Java: minrun computation, natural runs (strictly
  * descending runs reversed), binary-insertion extension to minrun, a run stack maintaining the
  * corrected invariants (de Gouw et al. 2015), gallop-based trimming before each merge, and
- * merge_lo / merge_hi using a temporary buffer the size of the smaller run.
- * Simplification: the adaptive in-merge galloping mode (min_gallop) is not used; merges are linear.
+ * merge_lo / merge_hi using a temporary buffer the size of the smaller run, including the
+ * adaptive galloping mode (min_gallop) of CPython's listsort.
  */
 export function timSort(m: Machine): void {
   const n = m.n;
   if (n < 2) return;
+  minGallop = MIN_GALLOP;
   if (n < 64) {
     const runEnd = countRunAndMakeAscending(m, 0, n);
     binaryInsertionRange(m, 0, n - 1, runEnd);
@@ -343,33 +344,183 @@ function mergeAt(m: Machine, base: number[], len: number[], i: number): void {
   else mergeHi(m, base1, len1, base2, len2);
 }
 
+/** Shared galloping state, adapted per run like CPython's ms->min_gallop. */
+const MIN_GALLOP = 7;
+let minGallop = MIN_GALLOP;
+
+/**
+ * Exponential + binary search over n elements accessed through `cmp(i)` = key − elem[i].
+ * left = true  -> first i with elem[i] >= key (gallop_left)
+ * left = false -> first i with elem[i] >  key (gallop_right)
+ * `fromEnd` starts the exponential search at the high end (hint = n-1), as merge_hi does.
+ */
+function gallop(n: number, cmp: (i: number) => number, left: boolean, fromEnd: boolean): number {
+  const before = (i: number) => (left ? cmp(i) > 0 : cmp(i) >= 0); // elem[i] goes before key
+  let lo: number;
+  let hi: number;
+  if (!fromEnd) {
+    lo = 0;
+    hi = n;
+    let ofs = 1;
+    let last = 0;
+    if (n === 0 || !before(0)) return 0;
+    while (ofs < n && before(ofs)) {
+      last = ofs;
+      ofs = ofs * 2 + 1;
+    }
+    lo = last + 1;
+    hi = Math.min(ofs, n);
+  } else {
+    if (n === 0) return 0;
+    if (before(n - 1)) return n;
+    let ofs = 1;
+    let last = 0;
+    while (ofs < n && !before(n - 1 - ofs)) {
+      last = ofs;
+      ofs = ofs * 2 + 1;
+    }
+    lo = Math.max(0, n - 1 - ofs + 1);
+    hi = n - 1 - last;
+    if (ofs >= n) lo = 0;
+  }
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (before(mid)) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/** CPython merge_lo: run1 (shorter) copied to tmp, merged left-to-right with galloping mode. */
 function mergeLo(m: Machine, base1: number, len1: number, base2: number, len2: number) {
   const tmp = m.alloc(len1);
   for (let k = 0; k < len1; k++) m.toAux(tmp, k, base1 + k);
   let c1 = 0;
   let c2 = base2;
   let dest = base1;
-  const end2 = base2 + len2;
-  while (c1 < len1 && c2 < end2) {
-    if (m.cmpHI(tmp.ids[c1], c2, base1 + c1) > 0) m.move(dest++, c2++);
-    else m.fromAux(dest++, tmp, c1++);
+  let na = len1;
+  let nb = len2;
+  // run2[0] is known to belong first (pre-trim)
+  m.move(dest++, c2++);
+  nb--;
+  const finish = () => {
+    if (na === 1) {
+      for (let k = 0; k < nb; k++) m.move(dest++, c2++);
+      m.fromAux(dest, tmp, c1);
+    } else for (let k = 0; k < na; k++) m.fromAux(dest++, tmp, c1++);
+    m.free(tmp);
+  };
+  if (nb === 0 || na === 1) return finish();
+  outer: for (;;) {
+    let acount = 0;
+    let bcount = 0;
+    // straight merge until one run wins min_gallop times in a row
+    for (;;) {
+      if (m.cmpHI(tmp.ids[c1], c2, base1 + c1) > 0) {
+        m.move(dest++, c2++);
+        bcount++;
+        acount = 0;
+        if (--nb === 0) break outer;
+        if (bcount >= minGallop) break;
+      } else {
+        m.fromAux(dest++, tmp, c1++);
+        acount++;
+        bcount = 0;
+        if (--na === 1) break outer;
+        if (acount >= minGallop) break;
+      }
+    }
+    minGallop++;
+    do {
+      minGallop -= minGallop > 1 ? 1 : 0;
+      const bKey = m.read(c2);
+      let k = gallop(na, (i) => m.cmpH(bKey, tmp.ids[c1 + i], c2, -1), false, false);
+      acount = k;
+      for (let t = 0; t < k; t++) m.fromAux(dest++, tmp, c1++);
+      na -= k;
+      if (na === 1) break outer;
+      if (na === 0) break outer;
+      m.move(dest++, c2++);
+      if (--nb === 0) break outer;
+      const aKey = tmp.ids[c1];
+      k = gallop(nb, (i) => m.cmpHI(aKey, c2 + i, base1 + c1), true, false);
+      bcount = k;
+      for (let t = 0; t < k; t++) m.move(dest++, c2++);
+      nb -= k;
+      if (nb === 0) break outer;
+      m.fromAux(dest++, tmp, c1++);
+      if (--na === 1) break outer;
+    } while (acount >= MIN_GALLOP || bcount >= MIN_GALLOP);
+    minGallop++;
   }
-  while (c1 < len1) m.fromAux(dest++, tmp, c1++);
-  m.free(tmp);
+  finish();
 }
 
+/** CPython merge_hi: run2 (shorter) copied to tmp, merged right-to-left with galloping mode. */
 function mergeHi(m: Machine, base1: number, len1: number, base2: number, len2: number) {
   const tmp = m.alloc(len2);
   for (let k = 0; k < len2; k++) m.toAux(tmp, k, base2 + k);
-  let c1 = base1 + len1 - 1;
-  let c2 = len2 - 1;
+  let c1 = base1 + len1 - 1; // last of run1 (main)
+  let c2 = len2 - 1; // last of tmp
   let dest = base2 + len2 - 1;
-  while (c1 >= base1 && c2 >= 0) {
-    if (m.cmpHI(tmp.ids[c2], c1, base2 + c2) < 0) m.move(dest--, c1--);
-    else m.fromAux(dest--, tmp, c2--);
+  let na = len1;
+  let nb = len2;
+  // run1's last element is known to belong last (pre-trim)
+  m.move(dest--, c1--);
+  na--;
+  const finish = () => {
+    if (nb === 1) {
+      for (let k = 0; k < na; k++) m.move(dest--, c1--);
+      m.fromAux(dest, tmp, c2);
+    } else for (let k = 0; k < nb; k++) m.fromAux(dest--, tmp, c2--);
+    m.free(tmp);
+  };
+  if (na === 0 || nb === 1) return finish();
+  outer: for (;;) {
+    let acount = 0;
+    let bcount = 0;
+    for (;;) {
+      if (m.cmpHI(tmp.ids[c2], c1, base2 + c2) < 0) {
+        m.move(dest--, c1--);
+        acount++;
+        bcount = 0;
+        if (--na === 0) break outer;
+        if (acount >= minGallop) break;
+      } else {
+        m.fromAux(dest--, tmp, c2--);
+        bcount++;
+        acount = 0;
+        if (--nb === 1) break outer;
+        if (bcount >= minGallop) break;
+      }
+    }
+    minGallop++;
+    do {
+      minGallop -= minGallop > 1 ? 1 : 0;
+      // run1 elements strictly greater than tmp[c2] move right
+      const bKey = tmp.ids[c2];
+      const lo1 = c1 - na + 1;
+      let k = na - gallop(na, (i) => m.cmpHI(bKey, lo1 + i, base2 + c2), false, true);
+      acount = k;
+      for (let t = 0; t < k; t++) m.move(dest--, c1--);
+      na -= k;
+      if (na === 0) break outer;
+      m.fromAux(dest--, tmp, c2--);
+      if (--nb === 1) break outer;
+      // tmp elements >= run1's current last move right
+      const aKey = m.read(c1);
+      k = nb - gallop(nb, (i) => m.cmpH(aKey, tmp.ids[i], c1, -1), true, true);
+      bcount = k;
+      for (let t = 0; t < k; t++) m.fromAux(dest--, tmp, c2--);
+      nb -= k;
+      if (nb === 1) break outer;
+      if (nb === 0) break outer;
+      m.move(dest--, c1--);
+      if (--na === 0) break outer;
+    } while (acount >= MIN_GALLOP || bcount >= MIN_GALLOP);
+    minGallop++;
   }
-  while (c2 >= 0) m.fromAux(dest--, tmp, c2--);
-  m.free(tmp);
+  finish();
 }
 
 // ---------------------------------------------------------------------------- Strand, Patience, Library
@@ -561,4 +712,160 @@ export function librarySort(m: Machine): void {
     m.sorted(k);
   }
   m.freeRaw(cap);
+}
+
+// ---------------------------------------------------------------------------- Block Merge Sort
+/**
+ * Block merge sort following the WikiSort (Arne Kutzner / Mike McFadden) block-merge procedure:
+ * A is cut into √|A|-sized blocks that are "rolled" through B by block swaps; whenever the
+ * smallest remaining A block belongs before the last B values it is dropped into place with a
+ * rotation, and the previous A block is merged locally with the B values that follow it.
+ *
+ * Variant: block tags and local merges use an O(√n) EXTERNAL buffer (WikiSort's cache-assisted
+ * mode) instead of extracting internal buffers from the array, so space is O(√n), not O(1).
+ * Stable: ties always keep A values before equal B values, and A blocks keep their tag order.
+ */
+export function blockMergeSort(m: Machine): void {
+  const n = m.n;
+  if (n < 2) return;
+  const bufSize = Math.max(16, Math.ceil(Math.sqrt(n)) + 1);
+  const buf = m.alloc(bufSize);
+  m.allocRaw(bufSize); // block tags
+
+  // 1) insertion-sort runs of 16
+  const RUN = 16;
+  for (let lo = 0; lo < n; lo += RUN) {
+    const hi = Math.min(n, lo + RUN);
+    for (let i = lo + 1; i < hi; i++) for (let j = i; j > lo && m.lt(j, j - 1); j--) m.swap(j, j - 1);
+  }
+
+  const blockSwap = (a: number, b: number, len: number) => {
+    for (let i = 0; i < len; i++) m.swap(a + i, b + i);
+  };
+  /** rotate [s, e) left by `amount` */
+  const rotateLeft = (amount: number, s: number, e: number) => {
+    if (amount <= 0 || amount >= e - s) return;
+    rotate(m, s, s + amount, e);
+  };
+  /** stable merge of [a0,a1) and [a1,b1) through the external buffer (|A| <= bufSize) */
+  const mergeExternal = (a0: number, a1: number, b1: number) => {
+    const na = a1 - a0;
+    if (na <= 0 || b1 <= a1) return;
+    if (!m.gt(a1 - 1, a1)) return; // already in order
+    for (let k = 0; k < na; k++) m.toAux(buf, k, a0 + k);
+    let i = 0;
+    let j = a1;
+    let d = a0;
+    while (i < na && j < b1) {
+      if (m.cmpHI(buf.ids[i], j, a0 + i) <= 0) m.fromAux(d++, buf, i++);
+      else m.move(d++, j++);
+    }
+    while (i < na) m.fromAux(d++, buf, i++);
+  };
+  /** first index in [s, e) whose value is >= value of element held in `key` */
+  const binaryFirst = (key: number, s: number, e: number) => {
+    let lo = s;
+    let hi = e;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (m.cmpHI(key, mid) > 0) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+
+  const merge = (aStart: number, aEnd: number, bEnd: number) => {
+    const bStart = aEnd;
+    if (aEnd <= aStart || bEnd <= bStart) return;
+    m.range(aStart, bEnd - 1);
+    if (!m.gt(aEnd - 1, bStart)) return; // already ordered
+    if (m.lt(bEnd - 1, aStart)) {
+      rotateLeft(aEnd - aStart, aStart, bEnd); // every B value precedes every A value
+      return;
+    }
+    const lenA = aEnd - aStart;
+    if (lenA <= bufSize) {
+      mergeExternal(aStart, aEnd, bEnd);
+      return;
+    }
+    const bs = Math.max(1, Math.floor(Math.sqrt(lenA)));
+    const firstLen = lenA % bs;
+    // rolling A blocks (positional order -> original tag)
+    const tags: number[] = [];
+    for (let t = 0; t < Math.floor(lenA / bs); t++) {
+      tags.push(t);
+      m.auxTouch();
+    }
+    let blockAStart = aStart + firstLen;
+    let blockAEnd = aEnd;
+    let lastAStart = aStart;
+    let lastAEnd = aStart + firstLen;
+    let lastBStart = 0;
+    let lastBEnd = 0;
+    let blockBStart = bStart;
+    let blockBEnd = bStart + Math.min(bs, bEnd - bStart);
+    const minPos = () => {
+      let p = 0;
+      for (let k = 1; k < tags.length; k++) if (tags[k] < tags[p]) p = k;
+      return p;
+    };
+    let pMin = minPos();
+    for (;;) {
+      const minA = blockAStart + pMin * bs;
+      m.pivot(minA);
+      if ((lastBEnd > lastBStart && m.cmp(lastBEnd - 1, minA) >= 0) || blockBEnd === blockBStart) {
+        // drop the minimum A block behind the B values smaller than its first value
+        const key = m.read(minA);
+        const bSplit = binaryFirst(key, lastBStart, lastBEnd);
+        const bRemaining = lastBEnd - bSplit;
+        if (pMin !== 0) {
+          blockSwap(blockAStart, minA, bs);
+          [tags[0], tags[pMin]] = [tags[pMin], tags[0]];
+          m.auxTouch();
+        }
+        // merge the previous A block with the B values that follow it
+        mergeExternal(lastAStart, lastAEnd, bSplit);
+        // move the dropped A block in front of the remaining (larger) B values
+        rotateLeft(blockAStart - bSplit, bSplit, blockAStart + bs);
+        lastAStart = blockAStart - bRemaining;
+        lastAEnd = lastAStart + bs;
+        lastBStart = lastAEnd;
+        lastBEnd = lastAEnd + bRemaining;
+        blockAStart += bs;
+        tags.shift();
+        if (blockAStart >= blockAEnd) break;
+        pMin = minPos();
+      } else if (blockBEnd - blockBStart < bs) {
+        // uneven final B block: rotate it in front of the remaining A blocks
+        const len = blockBEnd - blockBStart;
+        rotateLeft(blockBStart - blockAStart, blockAStart, blockBEnd);
+        lastBStart = blockAStart;
+        lastBEnd = blockAStart + len;
+        blockAStart += len;
+        blockAEnd += len;
+        blockBEnd = blockBStart;
+      } else {
+        // roll the leftmost A block to the end of the A blocks by swapping it with the next B block
+        blockSwap(blockAStart, blockBStart, bs);
+        lastBStart = blockAStart;
+        lastBEnd = blockAStart + bs;
+        tags.push(tags.shift()!);
+        m.auxTouch();
+        pMin = pMin === 0 ? tags.length - 1 : pMin - 1;
+        blockAStart += bs;
+        blockAEnd += bs;
+        blockBStart += bs;
+        blockBEnd = blockBEnd > bEnd - bs ? bEnd : blockBEnd + bs;
+      }
+    }
+    // merge the last A block with the remaining B values
+    mergeExternal(lastAStart, lastAEnd, bEnd);
+  };
+
+  for (let width = RUN; width < n; width *= 2) {
+    for (let lo = 0; lo + width < n; lo += 2 * width) merge(lo, lo + width, Math.min(n, lo + 2 * width));
+  }
+  m.freeRaw(bufSize);
+  m.free(buf);
+  m.sortedRange(0, n - 1);
 }

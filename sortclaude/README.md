@@ -4,7 +4,7 @@ A cinematic, scientifically accurate sorting-algorithm visualizer — one TypeSc
 
 Every bar, sound, counter, battle result and exported video frame is driven by the operations the algorithms *actually perform*. Nothing is faked.
 
-- **67 real, tested algorithms** (no renamed duplicates), each with complexity, stability, memory and pseudocode info.
+- **68 real, tested algorithms** (no renamed duplicates), each with complexity, stability, memory and pseudocode info.
 - **20 2D visualizations** (Canvas 2D) + **10 3D visualizations** (Three.js, instanced geometry, bloom, trails).
 - **Time machine**: play, pause, step ±1, scrub, jump to op #, A/B loop. Every recorded position is exactly reproducible.
 - **Sorting music**: Web Audio synthesis (11 instruments, 7 scales, ADSR, reverb, delay, filters) driven by displayed ops.
@@ -76,7 +76,7 @@ src/
   engine/            pure, UI-free core (runs in workers and in tests)
     ops.ts           reversible op encoding + counter conventions
     machine.ts       the instrumented array every algorithm runs on (record / count modes)
-    algorithms/      67 implementations (elementary, merge, quick, heap, distribution, network, novelty)
+    algorithms/      68 implementations (elementary, merge, quick, heap, distribution, network, novelty)
     registry.ts      metadata, limits, input-domain validation
     generators.ts    20 seeded data patterns + custom data parsing
     rng.ts           SFC32 seeded by SplitMix32 (the only RNG used for data)
@@ -115,22 +115,22 @@ tests/e2e            Playwright: acceptance workflows
 | Execution time | Measured wall-clock time of the instrumented worker run (includes recording overhead) |
 | Playback time | Real time spent animating |
 
-## Algorithm catalog (67)
+## Algorithm catalog (68)
 
 **Elementary:** Bubble, Optimized Bubble, Cocktail Shaker, Odd-Even, Comb, Comb 11, Exchange, Gnome, Optimized Gnome, Circle, Selection, Double Selection, Cycle, Tournament, Insertion, Binary Insertion, Tree, Library.
 **Gap & Network:** Shell (Shell, Knuth, Hibbard, Pratt, Sedgewick, Tokuda, Ciura gaps), Bitonic, Odd-Even Merge, Pairwise Network, Bose-Nelson Network.
-**Divide & Conquer:** Merge, Bottom-Up Merge, Natural Merge, In-Place Merge, SymMerge, Strand, Patience, Quick (Lomuto), Quick (Hoare), Three-Way Quick, Dual-Pivot Quick, Randomized Quick, Median-of-Three Quick, Stable Quick.
+**Divide & Conquer:** Merge, Bottom-Up Merge, Natural Merge, In-Place Merge, SymMerge, Block Merge (WikiSort-style, O(√n) buffer), Strand, Patience, Quick (Lomuto), Quick (Hoare), Three-Way Quick, Dual-Pivot Quick, Randomized Quick, Median-of-Three Quick, Stable Quick.
 **Heap:** Heap, Bottom-Up Heap, Ternary Heap, Weak Heap, Smoothsort.
 **Distribution:** Counting, Pigeonhole, Radix LSD (base 10), Radix LSD (base 4), Radix MSD, American Flag, Radix Exchange, Bucket, Flashsort, Gravity (bead, simulated).
 **Hybrid:** TimSort, IntroSort.
 **Experimental:** Pancake, Burnt Pancake, Stooge, Slow, Bogo, Bozo, Permutation.
 
-Not included (no implementation we could verify to the required standard): **Block Merge Sort (WikiSort/GrailSort)**. TimSort omits the adaptive in-merge galloping *mode* (merges are linear; gallop trimming before merges is implemented) — documented in its notes.
+Notes: **Block Merge Sort** follows WikiSort's block-merge procedure but keeps block tags and local-merge space in an O(√n) external buffer instead of extracting internal buffers (so it is stable with O(√n) extra space, not O(1)). **TimSort** includes CPython-style galloping mode (`min_gallop`).
 
 ## Testing
 
 ```bash
-npm test                 # Vitest: 249 unit tests
+npm test                 # Vitest unit tests
 npx playwright test      # Playwright acceptance tests (builds + serves the site automatically)
 ```
 

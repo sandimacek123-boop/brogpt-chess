@@ -8,8 +8,10 @@ import '@fontsource/jetbrains-mono/500.css';
 import './styles.css';
 import { App } from './ui/App';
 import { applyUrlConfig } from './state/share';
+import { ensureFonts } from './fonts';
 
 applyUrlConfig();
+void ensureFonts();
 
 // Read-only handle used by automated tests and power users (no privileged APIs).
 import('./state/player').then(({ player }) => import('./state/simulation').then(({ useSim }) => {
