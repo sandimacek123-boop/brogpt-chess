@@ -32,6 +32,8 @@ The production build in `dist/` is a fully static site (≈2.4 MB): deploy it to
 
 ## Windows desktop app
 
+A prebuilt installer is in [`dist/SortClaude-5.5-Setup.exe`](dist/SortClaude-5.5-Setup.exe) (unsigned: on SmartScreen choose More info → Run anyway).
+
 ```bash
 npm run dist:win   # → release/SortClaude-5.5-Setup.exe  (NSIS installer, choose install dir)
                    # → release/SortClaude-5.5-Portable.exe (single-file portable app)
