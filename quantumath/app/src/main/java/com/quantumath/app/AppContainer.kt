@@ -1,7 +1,5 @@
 package com.quantumath.app
 
-import android.app.Application
-import android.content.Context
 import com.quantumath.app.data.*
 import com.quantumath.math.learning.Achievements
 import com.quantumath.math.learning.Lessons
@@ -13,17 +11,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class QuantumathApp : Application() {
-    lateinit var container: AppContainer
-    override fun onCreate() {
-        super.onCreate()
-        container = AppContainer(this)
-    }
-}
-
-/** Manual dependency container (small app: no DI framework needed). */
-class AppContainer(context: Context, val db: AppDatabase = AppDatabase.build(context)) {
-    val settingsRepo = SettingsRepository(context)
+/** Manual dependency container (small app: no DI framework needed). Platform code supplies the database and settings store. */
+class AppContainer(val db: AppDatabase, val settingsRepo: SettingsRepository) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val settings: StateFlow<AppSettings> = settingsRepo.settings.stateIn(scope, SharingStarted.Eagerly, AppSettings())
     val backup = BackupManager(db, settingsRepo)
@@ -102,4 +91,3 @@ class ProgressRepository(private val db: AppDatabase) {
     }
 }
 
-val Context.container: AppContainer get() = (applicationContext as QuantumathApp).container

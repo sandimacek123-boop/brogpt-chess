@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.CompositionLocalProvider
+import com.quantumath.app.platform.AndroidPlatform
+import com.quantumath.app.platform.LocalAppContainer
+import com.quantumath.app.platform.LocalPlatform
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,7 +38,10 @@ class MainActivity : ComponentActivity() {
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                     onDispose {}
                 }
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { AppRoot() }
+                val platform = remember { AndroidPlatform(this@MainActivity) }
+                CompositionLocalProvider(LocalAppContainer provides c, LocalPlatform provides platform) {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) { AppRoot() }
+                }
             }
         }
     }

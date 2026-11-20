@@ -1,12 +1,26 @@
-# Quantumath — Advanced Mathematics Laboratory for Android
+# Quantumath — Advanced Mathematics Laboratory (Android + Windows)
 
-A native, offline Android app (Kotlin, Jetpack Compose, Material 3) for calculating, solving, graphing, exploring and learning mathematics. No account, no network permission, no ads, no analytics.
+A native, offline app (Kotlin, Jetpack Compose, Material 3) for calculating, solving, graphing, exploring and learning mathematics. No account, no network access, no ads, no analytics. One codebase ships as an **Android app** and a **Windows desktop app** (Compose Multiplatform).
 
 - **Package:** `com.quantumath.app` · **Version:** 1.0.0 (1)
 - **Runs on:** Android 9 (API 28) through Android 15 (API 35); target SDK 35
 - **Architecture:** MVVM + Navigation Compose + coroutines/StateFlow, Room + DataStore, a pure-Kotlin math engine in its own module
 
 ## Install
+
+### Windows
+
+Run **`Quantumath-1.0.0-Setup.exe`**. It installs for your user account only (no administrator rights needed) into `%LOCALAPPDATA%\Programs\Quantumath`, with a Start-menu entry, an optional desktop shortcut and an uninstaller (Settings → Apps). Quantumath brings its own Java runtime, so nothing else needs to be installed. Windows 10 or 11 x64.
+
+The installer is not code-signed, so SmartScreen may say "Windows protected your PC". Click **More info → Run anyway**. Your data lives in `%APPDATA%\Quantumath` and is kept on uninstall. If the window ever renders incorrectly on an unusual graphics driver, set the environment variable `QUANTUMATH_SOFTWARE_RENDER=1`.
+
+Desktop extras:
+- the calculator accepts typing from the keyboard (digits, operators, letters, Enter or `=`, Backspace, Esc, ←/→);
+- the mouse wheel zooms graphs and fractals;
+- "Share" copies to the clipboard or opens a Save dialog;
+- backups and exports use the native Windows file dialogs.
+
+### Android
 
 Ready-built APKs (when built locally) are in `output/`:
 
@@ -42,7 +56,7 @@ On the phone, open the APK and allow "Install unknown apps" for your file manage
 
 ## Build
 
-Requirements: JDK 17 or 21, Android SDK with platform 35 and build-tools 35 (`ANDROID_HOME` set, or `sdk.dir` in `local.properties`).
+Requirements: JDK 17 or 21, Android SDK with platform 35 and build-tools 35 (`ANDROID_HOME` set, or `sdk.dir` in `local.properties`). The desktop app needs only the JDK.
 
 ```bash
 cd quantumath
@@ -52,7 +66,22 @@ cd quantumath
 ./gradlew connectedDebugAndroidTest   # instrumented smoke tests (needs a device or emulator)
 ```
 
-### Release build
+### Windows app
+
+```bash
+./gradlew :desktop:run                  # run the desktop app on the current OS
+./gradlew :desktop:test                 # desktop UI + storage tests (headless)
+desktop/packaging/build-windows.sh      # → output/Quantumath-1.0.0-Setup.exe (works on Linux, macOS or WSL)
+```
+
+`build-windows.sh` performs these steps:
+1. Builds a self-contained jar with the Windows Skia natives (`:desktop:windowsJar`).
+2. Downloads a Temurin 21 JRE for Windows x64 (or uses `JRE_ZIP=/path/to/jre.zip`).
+3. Compiles the small `Quantumath.exe` launcher and the installer with NSIS (`makensis`, e.g. `apt install nsis`).
+
+On Windows you can also use `./gradlew :desktop:packageMsi` (jpackage + WiX) instead.
+
+### Android release build
 
 1. Create a keystore once and **keep it safe**: Android only accepts updates signed with the same key.
    ```bash
@@ -77,6 +106,9 @@ cd quantumath
 ```
 quantumath/
   mathcore/                      pure Kotlin/JVM math engine (no Android dependencies, fully unit-tested)
+  desktop/                       Windows/desktop app (Compose Multiplatform): window, JSON-file storage implementing the
+                                 same DAO interfaces as Room, desktop platform services, Room annotation stand-ins,
+                                 NSIS launcher + installer scripts (desktop/packaging)
     core/        Rational (BigInteger), error types
     expr/        tokenizer + recursive-descent parser → AST, pretty printer (no eval / scripting)
     eval/        double evaluator (compiled closures), BigDecimal evaluator + BigMath, exact rational evaluator
@@ -85,13 +117,16 @@ quantumath/
     linalg/ stats/ numbertheory/ complex/ geometry/ plot/ fractal/ format/
     learning/    lessons, formula library, seeded quiz generators, daily challenge, achievements
   app/
-    data/        Room entities and DAOs, DataStore settings, JSON backup/restore
+    src/main/java      platform-neutral code shared by Android and desktop:
+    data/        entities, DAO interfaces, DataStore settings, JSON backup/restore
     ui/theme     dark/light Material 3 theme, accents, font scaling
     ui/components shared widgets, plot canvas helpers
     ui/nav       Navigation Compose graph, bottom bar / navigation rail
     ui/screens   one ViewModel + screen per feature
-    util/        background computation with time limits, sharing (FileProvider)
-  output/                        built APKs (gitignored)
+    util/        background computation with time limits
+    platform/    PlatformActions interface (clipboard, share, files) — implemented per platform
+    src/main/platform  Android-only code: Activity, Application, Room database builder, Intents/FileProvider/SAF
+  output/                        built APKs and Windows installer (gitignored)
 ```
 
 ### Engineering notes
@@ -102,6 +137,6 @@ quantumath/
 - **Responsiveness.** Heavy work runs on `Dispatchers.Default` with cancellation and a time limit (calculator 20 s, number theory 15 s). Fractals render progressively (8× → 1×) across 8 parallel bands, and graph sampling is cached over a window larger than the visible one so panning is smooth.
 - **State.** ViewModels survive rotation, back navigation keeps each tab's state, and settings, history, notebook, progress and graph projects persist in Room/DataStore.
 - **Accessibility.** Content descriptions on all icon buttons, calculator keys and canvases; live regions for results and feedback; headings; scalable text (80–140 %); high-contrast and reduce-motion options; 48 dp touch targets for primary actions.
-- **Permissions.** None requested. Files are exchanged through the Storage Access Framework and `FileProvider` sharing.
+- **Permissions.** None requested on Android. Files are exchanged through the Storage Access Framework and `FileProvider` sharing (Android), or through native file dialogs (Windows).
 
 See **[VERIFICATION.md](VERIFICATION.md)** for exactly what was tested and the known limitations.

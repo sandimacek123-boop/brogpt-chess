@@ -23,7 +23,6 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -46,7 +45,6 @@ import com.quantumath.app.ui.nav.appViewModel
 import com.quantumath.app.ui.theme.CurvePalette
 import com.quantumath.app.ui.theme.LocalLab
 import com.quantumath.app.ui.theme.MonoFamily
-import com.quantumath.app.util.Share
 import com.quantumath.app.util.friendlyError
 import com.quantumath.math.eval.AngleMode
 import com.quantumath.math.eval.Evaluator
@@ -62,6 +60,8 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
 import kotlin.math.max
+import com.quantumath.app.platform.LocalPlatform
+import com.quantumath.app.platform.LocalAppContainer
 
 class SceneHolder { var scene: GraphScene? = null }
 
@@ -148,6 +148,9 @@ class GraphViewModel(private val c: AppContainer) : ViewModel() {
         val pts = ArrayList<GPoint>(); val va = ArrayList<Pair<Double, Color>>(); val ha = ArrayList<Pair<Double, Color>>()
         for ((_, f, col) in fs) {
             ensureActive()
+            // constant functions (e.g. the "y = 0" side of an equation) have no meaningful roots/extrema
+            val samples = (0..8).map { f(r.vp.xMin + r.vp.width * (it + 0.37) / 9) }
+            if (samples.all { it.isFinite() && abs(it - samples[0]) <= 1e-12 * (1 + abs(samples[0])) }) continue
             if (r.roots) runCatching { GraphAnalysis.roots(f, r.vp).take(40).forEach { pts += GPoint(it.x, 0.0, "root", col) } }
             if (r.extrema) runCatching { GraphAnalysis.extrema(f, r.vp).take(40).forEach { pts += GPoint(it.x, it.y, it.label, col) } }
             if (r.asym) {
@@ -170,8 +173,28 @@ class GraphViewModel(private val c: AppContainer) : ViewModel() {
         if (text.isBlank()) return
         val lines = text.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
         functions.value = emptyList()
-        lines.forEach { add(it) }
-        fit()
+        for (l in lines) {
+            // "@view xMin xMax yMin yMax" = explicit window (e.g. from the solver's plot)
+            if (l.startsWith("@view")) {
+                val v = l.removePrefix("@view").trim().split(Regex("\\s+")).mapNotNull { it.toDoubleOrNull() }
+                if (v.size == 4 && v[1] > v[0] && v[3] > v[2]) { viewport.value = Viewport(v[0], v[1], v[2], v[3]); explicitView = true }
+            } else add(l)
+        }
+        if (!explicitView) { if (sizeKnown) fit() else pendingFit = true }
+    }
+
+    /** Set once the canvas is measured; fitting before that would use a placeholder aspect ratio. */
+    private var sizeKnown = false
+    private var explicitView = false
+    private var pendingFit = false
+    fun onCanvasSize(s: IntSize) {
+        val first = !sizeKnown
+        canvasSize.value = s
+        sizeKnown = true
+        if (first) {
+            if (!explicitView) equalAspect()
+            if (pendingFit) { pendingFit = false; fit() }
+        }
     }
 
     fun detectType(t: String): String = when {
@@ -294,7 +317,8 @@ fun GraphScreen(nav: NavHostController, initial: String) {
     val fns by vm.functions.collectAsStateWithLifecycle()
     var showProjects by remember { mutableStateOf(false) }
     var showAnalysis by remember { mutableStateOf(false) }
-    val ctx = LocalContext.current
+    val platform = LocalPlatform.current
+    val container = LocalAppContainer.current
     val scope = rememberCoroutineScope()
     val holder = remember { SceneHolder() }
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -307,10 +331,10 @@ fun GraphScreen(nav: NavHostController, initial: String) {
                     runCatching {
                         val sc = holder.scene ?: error("Graph not ready")
                         val sz = vm.canvasSize.value
-                        val bmp = renderGraphBitmap(sc, vm, sz.width, sz.height, density).asAndroidBitmap() // main thread: shares the TextMeasurer
-                        Share.image(ctx, bmp, "quantumath-graph")
+                        val img = renderGraphBitmap(sc, vm, sz.width, sz.height, density) // main thread: shares the TextMeasurer
+                        platform.shareImage(img, "quantumath-graph")
                     }
-                        .onFailure { android.widget.Toast.makeText(ctx, "Screenshot failed: ${it.message}", android.widget.Toast.LENGTH_SHORT).show() }
+                        .onFailure { container.messages.tryEmit("Screenshot failed: ${it.message}") }
                 }
             }) { Icon(Icons.Outlined.PhotoCamera, "Share screenshot of graph") }
             IconButton(onClick = { showProjects = true }) { Icon(Icons.Outlined.FolderOpen, "Saved graph projects") }
@@ -347,8 +371,9 @@ private fun GraphCanvas(vm: GraphViewModel, modifier: Modifier, holder: SceneHol
     Box(modifier.clip(RoundedCornerShape(20.dp))) {
         Canvas(
             Modifier.fillMaxSize()
-                .onSizeChanged { if (it.width > 0 && it.height > 0) { val first = vm.canvasSize.value == IntSize(1000, 600); vm.canvasSize.value = it; if (first) vm.equalAspect() } }
+                .onSizeChanged { if (it.width > 0 && it.height > 0) vm.onCanvasSize(it) }
                 .pointerInput(Unit) { detectTransformGestures { centroid, pan, zoom, _ -> vm.pan(pan.x, pan.y); if (zoom != 1f) vm.zoom(zoom, centroid.x, centroid.y) } }
+                .wheelZoom { f, x, y -> vm.zoom(f, x, y) }
                 .pointerInput(Unit) { detectTapGestures(onDoubleTap = { vm.zoom(2f, it.x, it.y) }, onTap = { o ->
                     val s = vm.canvasSize.value; val m = Mapper(vm.viewport.value, s.width.toFloat(), s.height.toFloat())
                     // snap to a nearby analysis point

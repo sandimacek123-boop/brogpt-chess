@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,7 +37,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.quantumath.app.AppContainer
 import com.quantumath.app.ProgressRepository
-import com.quantumath.app.container
 import com.quantumath.app.data.*
 import com.quantumath.app.ui.components.*
 import com.quantumath.app.ui.nav.Routes
@@ -55,6 +53,7 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.sin
+import com.quantumath.app.platform.LocalAppContainer
 
 data class ToolInfo(val route: String, val title: String, val subtitle: String, val icon: ImageVector, val color: Long, val keywords: String)
 
@@ -317,7 +316,7 @@ fun FavoritesScreen(nav: NavHostController) {
 
 @Composable
 fun AchievementsScreen(nav: NavHostController) {
-    val c = LocalContext.current.container
+    val c = LocalAppContainer.current
     val unlocked by c.progress.achievements.collectAsStateWithLifecycle(emptyList())
     val map = unlocked.associateBy { it.id }
     Column(Modifier.fillMaxSize()) {

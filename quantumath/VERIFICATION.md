@@ -1,4 +1,4 @@
-# Quantumath — Verification Report
+# Quantumath — Verification Report (Android + Windows)
 
 Build and test environment: Linux container (x86_64, 4 vCPU), JDK 21, Gradle 8.11.1, AGP 8.7.3, Kotlin 2.0.21, Android SDK platform 35 / build-tools 35.0.0. **No physical Android device and no emulator were available** (the container has no KVM). UI behaviour was therefore verified with Robolectric (simulated Android 14 runtime, native graphics mode), not on real hardware.
 
@@ -124,6 +124,46 @@ End-to-end UI flows drive the real Compose UI and check values produced by the e
 5. The trig explorer's coordinate label was clipped at the canvas edge. It is now placed inside.
 6. Graph screenshots used a hardware RenderNode path that fails on software canvases. Screenshots now render directly into a bitmap.
 7. The landscape bottom bar wasted ~20 % of the height. A navigation rail is used in landscape.
+
+## Windows desktop app (`Quantumath-1.0.0-Setup.exe`)
+
+The desktop app compiles the **same shared source** (all screens, ViewModels, the data model and the math engine) with Compose Multiplatform 1.7.3. Storage is a JSON file implementing the same DAO interfaces Room implements on Android; settings use DataStore.
+
+| Check | Result |
+|---|---|
+| Desktop tests (`:desktop:test`, headless Compose UI) | ✅ 6 / 6 |
+| `desktop/packaging/build-windows.sh` | ✅ `Quantumath-1.0.0-Setup.exe`, 102,259,732 bytes |
+| Installer structure (`file`, `7z l`) | ✅ NSIS installer (PE32 GUI), 322 files. It contains `Quantumath.exe` (NSIS launcher), `app/quantumath.jar` (79.6 MB), the icon, the uninstaller, and a Temurin 21.0.13.1 x64 JRE (`javaw.exe` is a PE32+ x86-64 binary; `jvm.dll` and `awt.dll` are present). |
+| Jar contents | ✅ contains `skiko-windows-x64.dll` (Windows Skia renderer); Linux natives are excluded. |
+| Same jar launched as a real window | ✅ on Linux under Xvfb, adding only the Linux Skia library: the window opens at 1280×840 with no errors in the log. |
+| Run on Windows / under Wine | ❌ **not possible in this environment**. Wine 9.0 crashes inside libc before running any Windows program (even `cmd /c echo`) on this container's kernel, so the installer and launcher were never executed. |
+
+SHA-256: `7598554d8d22b1fa3ca2f6787200d8cfd0178e1be3f431b6fdfa0c8327bc6321  Quantumath-1.0.0-Setup.exe`
+
+**Desktop UI tests:**
+- **Calculator:** `2+3×4 = 14` by clicking; `1/3` typed on the keyboard plus Enter gives `= 1/3`.
+- **Solver:** `x = 2, x = 3`, then "Open in Graph". This passes both sides plus the solver's view window through a URL-encoded navigation argument, and the graph opens on exactly that window with roots and the vertex marked.
+- **Every tool:** each Laboratory tool and the Learning center open and go back.
+- **Image conversion:** ARGB pixels → Skia image keeps exact colours (the fractal renderer depends on this).
+- **JSON storage:**
+  - notes, folders, history and achievements survive reopening the database file;
+  - backup → wipe → restore works;
+  - a rejected restore leaves data untouched;
+  - a corrupt data file is preserved (renamed `.corrupt-…`) instead of being overwritten;
+  - history trimming and case-insensitive search match the Room SQL semantics.
+
+**Found while porting and fixed (affects Android too):**
+- "Open in Graph" auto-fitted the view before the canvas had a size and landed on a useless window. The solver now passes its plot window, and auto-fit waits for the canvas.
+- A constant function (`y = 0`) got a spurious root marker.
+
+**Not verified on Windows:**
+- the installer UI, shortcuts and uninstaller;
+- the `Quantumath.exe` launcher;
+- Direct3D/OpenGL rendering and HiDPI scaling;
+- native file dialogs and the clipboard;
+- performance.
+
+These were never run on Windows; the installer is also not code-signed, so SmartScreen will warn.
 
 ## Implemented but not fully tested
 

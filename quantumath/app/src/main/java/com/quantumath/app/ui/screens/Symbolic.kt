@@ -173,7 +173,7 @@ private fun SingleResult(o: SolverOut.Single, vm: SolverViewModel, nav: NavHostC
         val span = max(4.0, (hi - lo) * 1.6)
         val mid = (lo + hi) / 2
         val vp = autoViewport({ fl(it) - fr(it) }, mid - span / 2, mid + span / 2).let { v -> Viewport(v.xMin, v.xMax, minOf(v.yMin, -1.0), maxOf(v.yMax, 1.0)) }
-        Panel(title = "Both sides", icon = Icons.Outlined.ShowChart, trailing = { TextButton(onClick = { nav.openTool(Kind.GRAPH, "${pu(rel.left)}\n${pu(rel.right)}".replace("−", "-").replace("·", "*")) }) { Text("Open in Graph") } }) {
+        Panel(title = "Both sides", icon = Icons.Outlined.ShowChart, trailing = { TextButton(onClick = { nav.openTool(Kind.GRAPH, "${pu(rel.left)}\n${pu(rel.right)}".replace("−", "-").replace("·", "*") + "\n@view ${vp.xMin} ${vp.xMax} ${vp.yMin} ${vp.yMax}") }) { Text("Open in Graph") } }) {
             MiniPlot(listOf(PlotCurve(fl, lab.curves[0]), PlotCurve(fr, lab.curves[1])), vp, points = xs.map { PlotPoint(it, fl(it), lab.warning) }, description = "Graph of both sides; intersections are the solutions")
         }
     }

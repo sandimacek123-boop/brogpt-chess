@@ -1,6 +1,5 @@
 package com.quantumath.app.ui.nav
 
-import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
@@ -19,7 +18,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -31,14 +29,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.quantumath.app.AppContainer
-import com.quantumath.app.container
 import com.quantumath.app.data.Kind
 import com.quantumath.app.ui.screens.*
 import com.quantumath.app.ui.theme.LocalReduceMotion
+import com.quantumath.app.platform.encodeNavArg
+import com.quantumath.app.platform.LocalAppContainer
 
 @Composable
 inline fun <reified VM : ViewModel> appViewModel(crossinline create: (AppContainer) -> VM): VM {
-    val c = LocalContext.current.container
+    val c = LocalAppContainer.current
     return viewModel { create(c) }
 }
 
@@ -53,7 +52,7 @@ val TopDestinations = listOf(
 )
 
 object Routes {
-    fun enc(s: String) = Uri.encode(s)
+    fun enc(s: String) = encodeNavArg(s)
     fun tool(kind: String, input: String = ""): String = when (kind) {
         Kind.CALC -> "calc?input=${enc(input)}"
         Kind.SOLVE -> "solver?input=${enc(input)}"
@@ -83,10 +82,10 @@ fun NavHostController.navigateTop(route: String) = navigate(route) {
 @Composable
 fun AppRoot() {
     val nav = rememberNavController()
-    val ctx = LocalContext.current
+    val container = LocalAppContainer.current
     var message by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        ctx.container.messages.collect { m -> message = m; kotlinx.coroutines.delay(2600); message = null; kotlinx.coroutines.delay(250) }
+        container.messages.collect { m -> message = m; kotlinx.coroutines.delay(2600); message = null; kotlinx.coroutines.delay(250) }
     }
     val entry by nav.currentBackStackEntryAsState()
     val currentRoute = entry?.destination?.route?.substringBefore("?")?.substringBefore("/")
@@ -94,7 +93,7 @@ fun AppRoot() {
     val reduce = LocalReduceMotion.current
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-    val rail = maxWidth > maxHeight && maxHeight < 560.dp
+    val rail = maxWidth > maxHeight && (maxHeight < 560.dp || maxWidth >= 900.dp)
     Row(Modifier.fillMaxSize()) {
     if (rail && showBar) {
         NavigationRail(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Vertical))) {

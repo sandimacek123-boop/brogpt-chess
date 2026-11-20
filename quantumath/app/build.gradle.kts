@@ -57,6 +57,8 @@ android {
     }
     buildFeatures { compose = true; buildConfig = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+    // src/main/java = platform-neutral code shared with the desktop app; src/main/platform = Android-only code
+    sourceSets["main"].java.srcDir("src/main/platform")
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {

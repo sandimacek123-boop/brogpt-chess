@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -43,7 +42,9 @@ import androidx.compose.ui.unit.sp
 import com.quantumath.app.ui.theme.LocalLab
 import com.quantumath.app.ui.theme.MonoFamily
 import com.quantumath.app.util.Outcome
-import com.quantumath.app.util.Share
+import com.quantumath.app.platform.LocalPlatform
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,7 +174,7 @@ fun ResultPanel(
     onSave: (() -> Unit)? = null,
     extra: @Composable ColumnScope.() -> Unit = {},
 ) {
-    val ctx = LocalContext.current
+    val platform = LocalPlatform.current
     val lab = LocalLab.current
     Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = lab.panel, border = BorderStroke(1.dp, lab.accent.copy(alpha = 0.45f))) {
         Column(Modifier.background(Brush.verticalGradient(listOf(lab.glow.copy(alpha = 0.18f), Color.Transparent))).padding(16.dp)) {
@@ -183,8 +184,8 @@ fun ResultPanel(
             if (secondary != null) { Spacer(Modifier.height(4.dp)); SelectionContainer { Text(secondary, style = MaterialTheme.typography.bodyMedium.copy(fontFamily = MonoFamily), color = MaterialTheme.colorScheme.onSurfaceVariant) } }
             extra()
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
-                IconButton(onClick = { Share.copy(ctx, title, shareText) }) { Icon(Icons.Outlined.ContentCopy, "Copy result") }
-                IconButton(onClick = { Share.text(ctx, shareText) }) { Icon(Icons.Outlined.Share, "Share result") }
+                IconButton(onClick = { platform.copy(title, shareText) }) { Icon(Icons.Outlined.ContentCopy, "Copy result") }
+                IconButton(onClick = { platform.shareText(shareText) }) { Icon(Icons.Outlined.Share, "Share result") }
                 if (onSave != null) IconButton(onClick = onSave) { Icon(Icons.Outlined.BookmarkAdd, "Save to notebook") }
             }
         }
@@ -311,8 +312,25 @@ fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit, subt
 /** Standard scrolling screen body with consistent padding. */
 @Composable
 fun ScreenColumn(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp), content = content,
-    )
+    // centred with a readable maximum width on tablets and desktop windows
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            modifier.widthIn(max = 960.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp), content = content,
+        )
+    }
+}
+
+/** Mouse-wheel / trackpad scroll → zoom (desktop, Chromebooks, Android with a mouse). [onZoom] gets factor > 1 to zoom in. */
+fun Modifier.wheelZoom(onZoom: (factor: Float, x: Float, y: Float) -> Unit): Modifier = this.pointerInput(Unit) {
+    awaitPointerEventScope {
+        while (true) {
+            val ev = awaitPointerEvent()
+            if (ev.type == PointerEventType.Scroll) {
+                val ch = ev.changes.firstOrNull() ?: continue
+                val dy = ch.scrollDelta.y
+                if (dy != 0f) { onZoom(if (dy < 0) 1.2f else 1f / 1.2f, ch.position.x, ch.position.y); ch.consume() }
+            }
+        }
+    }
 }

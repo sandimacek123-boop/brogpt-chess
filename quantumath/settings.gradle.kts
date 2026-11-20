@@ -15,4 +15,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Quantumath"
-include(":app", ":mathcore")
+include(":app", ":mathcore", ":desktop")

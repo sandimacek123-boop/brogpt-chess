@@ -1,8 +1,5 @@
 package com.quantumath.app.ui.screens
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -17,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -25,16 +21,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.quantumath.app.AppContainer
-import com.quantumath.app.BuildConfig
 import com.quantumath.app.ProgressRepository
-import com.quantumath.app.container
 import com.quantumath.app.data.*
 import com.quantumath.app.ui.components.*
 import com.quantumath.app.ui.nav.appViewModel
 import com.quantumath.app.ui.nav.openTool
 import com.quantumath.app.ui.theme.LocalLab
 import com.quantumath.app.ui.theme.MonoFamily
-import com.quantumath.app.util.Share
 import com.quantumath.math.learning.Achievements
 import com.quantumath.math.learning.Difficulty
 import com.quantumath.math.learning.QuizTopic
@@ -46,6 +39,10 @@ import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
+import com.quantumath.app.platform.rememberOpenTextFile
+import com.quantumath.app.platform.rememberSaveTextFile
+import com.quantumath.app.platform.AppInfo
+import com.quantumath.app.platform.LocalPlatform
 
 // =============================== Notebook ===============================
 
@@ -61,13 +58,10 @@ class NotebookViewModel(private val c: AppContainer) : ViewModel() {
     fun renameFolder(f: Folder, name: String) = viewModelScope.launch { if (name.isNotBlank()) c.db.notebook().updateFolder(f.copy(name = name.trim())) }
     fun deleteFolder(f: Folder) = viewModelScope.launch { c.db.notebook().deleteFolder(f.id); filter = -1 }
 
-    fun export(ctx: android.content.Context, uri: Uri) = viewModelScope.launch {
-        runCatching { val json = c.backup.exportNotebook(); withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(json.toByteArray()) } } }
-            .onSuccess { c.messages.emit("Notebook exported") }.onFailure { c.messages.emit("Export failed: ${it.message}") }
-    }
-    fun share(ctx: android.content.Context) = viewModelScope.launch { runCatching { Share.file(ctx, c.backup.exportNotebook(), "quantumath-notebook.json") } }
-    fun import(ctx: android.content.Context, uri: Uri) = viewModelScope.launch {
-        runCatching { val text = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() } }; c.backup.importNotebook(text) }
+    suspend fun notebookJson(): String = c.backup.exportNotebook()
+    fun report(msg: String) { c.messages.tryEmit(msg) }
+    fun importText(text: String) = viewModelScope.launch {
+        runCatching { c.backup.importNotebook(text) }
             .onSuccess { c.messages.emit("Imported $it entries") }.onFailure { c.messages.emit("Import failed: ${it.message}") }
     }
 }
@@ -77,13 +71,14 @@ fun NotebookScreen(nav: NavHostController) {
     val vm = appViewModel { NotebookViewModel(it) }
     val notes by vm.notes.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
-    val ctx = LocalContext.current
+    val platform = LocalPlatform.current
+    val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf<Note?>(null) }
     var folderDialog by remember { mutableStateOf<Folder?>(null) }
     var newFolder by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let { u -> vm.export(ctx, u) } }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { u -> vm.import(ctx, u) } }
+    val saveFile = rememberSaveTextFile { r -> r.onSuccess { vm.report("Notebook exported to $it") }.onFailure { vm.report("Export failed: ${it.message}") } }
+    val openFile = rememberOpenTextFile { r -> r.onSuccess { vm.importText(it) }.onFailure { vm.report("Import failed: ${it.message}") } }
     val shown = notes.filter { when (vm.filter) { -1L -> true; -2L -> it.favorite; -3L -> it.folderId == null; else -> it.folderId == vm.filter } }
 
     Column(Modifier.fillMaxSize()) {
@@ -92,9 +87,9 @@ fun NotebookScreen(nav: NavHostController) {
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, "More options") }
                 DropdownMenu(menu, { menu = false }) {
-                    DropdownMenuItem(text = { Text("Export to file…") }, onClick = { menu = false; exportLauncher.launch("quantumath-notebook.json") }, leadingIcon = { Icon(Icons.Outlined.FileDownload, null) })
-                    DropdownMenuItem(text = { Text("Import from file…") }, onClick = { menu = false; importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }, leadingIcon = { Icon(Icons.Outlined.FileUpload, null) })
-                    DropdownMenuItem(text = { Text("Share export") }, onClick = { menu = false; vm.share(ctx) }, leadingIcon = { Icon(Icons.Outlined.Share, null) })
+                    DropdownMenuItem(text = { Text("Export to file…") }, onClick = { menu = false; saveFile("quantumath-notebook.json") { vm.notebookJson() } }, leadingIcon = { Icon(Icons.Outlined.FileDownload, null) })
+                    DropdownMenuItem(text = { Text("Import from file…") }, onClick = { menu = false; openFile() }, leadingIcon = { Icon(Icons.Outlined.FileUpload, null) })
+                    if (!platform.isDesktop) DropdownMenuItem(text = { Text("Share export") }, onClick = { menu = false; scope.launch { runCatching { platform.shareFile(vm.notebookJson(), "quantumath-notebook.json") } } }, leadingIcon = { Icon(Icons.Outlined.Share, null) })
                 }
             }
         })
@@ -126,7 +121,7 @@ fun NotebookScreen(nav: NavHostController) {
 @Composable
 private fun NoteCard(n: Note, folders: List<Folder>, vm: NotebookViewModel, nav: NavHostController, onEdit: () -> Unit) {
     val lab = LocalLab.current
-    val ctx = LocalContext.current
+    val platform = LocalPlatform.current
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     Surface(onClick = { if (n.kind == Kind.NOTE || n.kind == Kind.FORMULA) onEdit() else nav.openTool(n.kind, n.input) }, shape = RoundedCornerShape(16.dp), color = lab.panel, border = BorderStroke(1.dp, lab.panelBorder)) {
@@ -145,7 +140,7 @@ private fun NoteCard(n: Note, folders: List<Folder>, vm: NotebookViewModel, nav:
                 DropdownMenu(menu, { menu = false }) {
                     if (n.kind != Kind.NOTE) DropdownMenuItem(text = { Text("Open in tool") }, onClick = { menu = false; nav.openTool(n.kind, n.input) })
                     DropdownMenuItem(text = { Text("Edit") }, onClick = { menu = false; onEdit() })
-                    DropdownMenuItem(text = { Text("Share") }, onClick = { menu = false; Share.text(ctx, listOf(n.title, n.input, n.result, n.body).filter { it.isNotBlank() }.distinct().joinToString("\n")) })
+                    DropdownMenuItem(text = { Text("Share") }, onClick = { menu = false; platform.shareText(listOf(n.title, n.input, n.result, n.body).filter { it.isNotBlank() }.distinct().joinToString("\n")) })
                     DropdownMenuItem(text = { Text("Delete", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; confirmDelete = true })
                 }
             }
@@ -239,12 +234,10 @@ fun ChallengeScreen(nav: NavHostController) {
 
 class SettingsViewModel(val c: AppContainer) : ViewModel() {
     fun update(t: (AppSettings) -> AppSettings) = viewModelScope.launch { c.settingsRepo.update(t) }
-    fun backup(ctx: android.content.Context, uri: Uri) = viewModelScope.launch {
-        runCatching { val json = c.backup.exportAll(); withContext(Dispatchers.IO) { ctx.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(json.toByteArray()) } } }
-            .onSuccess { c.messages.emit("Backup saved") }.onFailure { c.messages.emit("Backup failed: ${it.message}") }
-    }
-    fun restore(ctx: android.content.Context, uri: Uri) = viewModelScope.launch {
-        runCatching { val text = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() } }; c.backup.restoreAll(text) }
+    suspend fun backupJson(): String = c.backup.exportAll()
+    fun report(msg: String) { c.messages.tryEmit(msg) }
+    fun restoreText(text: String) = viewModelScope.launch {
+        runCatching { c.backup.restoreAll(text) }
             .onSuccess { c.messages.emit("Restored: ${it.notes} notes, ${it.history} history entries, ${it.lessons} lessons, ${it.quizzes} quizzes") }
             .onFailure { c.messages.emit("Restore failed: ${it.message}") }
     }
@@ -256,10 +249,9 @@ class SettingsViewModel(val c: AppContainer) : ViewModel() {
 fun SettingsScreen(nav: NavHostController) {
     val vm = appViewModel { SettingsViewModel(it) }
     val s by vm.c.settings.collectAsStateWithLifecycle()
-    val ctx = LocalContext.current
     var confirm by remember { mutableStateOf<String?>(null) }
-    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let { u -> vm.backup(ctx, u) } }
-    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { u -> vm.restore(ctx, u) } }
+    val saveFile = rememberSaveTextFile { r -> r.onSuccess { vm.report("Backup saved to $it") }.onFailure { vm.report("Backup failed: ${it.message}") } }
+    val openFile = rememberOpenTextFile { r -> r.onSuccess { vm.restoreText(it) }.onFailure { vm.report("Restore failed: ${it.message}") } }
     Column(Modifier.fillMaxSize()) {
         LabTopBar("Settings", onBack = { nav.popBackStack() })
         ScreenColumn {
@@ -298,13 +290,13 @@ fun SettingsScreen(nav: NavHostController) {
                 Text("Everything stays on your device. A backup is a JSON file with settings, history, notebook, graph projects and learning progress.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(onClick = { backupLauncher.launch("quantumath-backup-${ProgressRepository.dayKey(ProgressRepository.today())}.json") }, Modifier.weight(1f)) { Text("Back up…") }
+                    Button(onClick = { saveFile("quantumath-backup-${ProgressRepository.dayKey(ProgressRepository.today())}.json") { vm.backupJson() } }, Modifier.weight(1f)) { Text("Back up…") }
                     OutlinedButton(onClick = { confirm = "restore" }, Modifier.weight(1f)) { Text("Restore…") }
                 }
                 TextButton(onClick = { confirm = "progress" }) { Text("Reset learning progress", color = MaterialTheme.colorScheme.error) }
             }
             Panel(title = "About", icon = Icons.Outlined.Info) {
-                KeyValue("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                KeyValue("Version", "${AppInfo.VERSION_NAME} (${AppInfo.VERSION_CODE}) · ${LocalPlatform.current.platformName}")
                 KeyValue("Works offline", "Yes — no account, no network permission", mono = false)
                 Text("Quantumath evaluates expressions with its own parser (no code execution). Exact arithmetic uses arbitrary-size rationals; the calculator uses BigDecimal at the selected precision; graphs and numerical methods use double precision. Where a result is numerical rather than exact, it is labelled.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -313,7 +305,7 @@ fun SettingsScreen(nav: NavHostController) {
     confirm?.let { what ->
         AlertDialog(onDismissRequest = { confirm = null }, title = { Text(when (what) { "history" -> "Clear history?"; "restore" -> "Restore a backup?"; else -> "Reset progress?" }) },
             text = { Text(when (what) { "history" -> "All history entries will be deleted."; "restore" -> "Restoring replaces ALL current data (notebook, history, progress, settings) with the backup's contents."; else -> "Lesson completion, quiz results and achievements will be deleted." }) },
-            confirmButton = { TextButton(onClick = { when (what) { "history" -> vm.clearHistory(); "restore" -> restoreLauncher.launch(arrayOf("application/json", "text/plain", "*/*")); else -> vm.resetProgress() }; confirm = null }) { Text("Continue") } },
+            confirmButton = { TextButton(onClick = { when (what) { "history" -> vm.clearHistory(); "restore" -> openFile(); else -> vm.resetProgress() }; confirm = null }) { Text("Continue") } },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } })
     }
 }

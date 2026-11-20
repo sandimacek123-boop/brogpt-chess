@@ -1,6 +1,5 @@
 package com.quantumath.app.ui.screens
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,7 +21,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -34,13 +32,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavHostController
 import com.quantumath.app.AppContainer
-import com.quantumath.app.container
 import com.quantumath.app.ui.components.*
 import com.quantumath.app.ui.nav.appViewModel
 import com.quantumath.app.ui.theme.LocalLab
 import com.quantumath.app.ui.theme.LocalReduceMotion
 import com.quantumath.app.ui.theme.MonoFamily
-import com.quantumath.app.util.Share
 import com.quantumath.math.eval.Evaluator
 import com.quantumath.math.expr.Parser
 import com.quantumath.math.fractal.Fractal
@@ -49,6 +45,8 @@ import com.quantumath.math.plot.Viewport
 import com.quantumath.math.symbolic.LimitSolver
 import kotlinx.coroutines.*
 import kotlin.math.*
+import com.quantumath.app.platform.imageFromArgb
+import com.quantumath.app.platform.LocalPlatform
 
 class VizViewModel(val c: AppContainer) : ViewModel() {
     var tab by mutableStateOf(0)
@@ -103,10 +101,9 @@ fun VisualizationScreen(nav: NavHostController) {
 
 @Composable
 private fun FractalPanel(vm: VizViewModel, julia: Boolean) {
-    val ctx = LocalContext.current
+    val platform = LocalPlatform.current
     var size by remember { mutableStateOf(IntSize.Zero) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var progress by remember { mutableStateOf(0f) }
     val view = if (julia) vm.jView else vm.mView
     val maxIter = vm.iter.roundToInt()
@@ -120,7 +117,6 @@ private fun FractalPanel(vm: VizViewModel, julia: Boolean) {
         val v = FractalView(view.centerX, view.centerY, scale)
         val out = FloatArray(w * h)
         val pixels = IntArray(w * h)
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         for (step in intArrayOf(8, 4, 2, 1)) {
             withContext(Dispatchers.Default) {
                 val bands = 8
@@ -137,10 +133,8 @@ private fun FractalPanel(vm: VizViewModel, julia: Boolean) {
                     }
                 }.awaitAll()
                 for (i in out.indices) { val s = out[i]; pixels[i] = if (s < 0) 0xFF05050A.toInt() else paletteColor(vm.palette, (sqrt(s.toDouble()) * 0.11) % 1.0) }
-                bmp.setPixels(pixels, 0, w, 0, 0, w, h)
             }
-            image = bmp.copy(Bitmap.Config.ARGB_8888, false).asImageBitmap()
-            bitmap = bmp
+            image = imageFromArgb(pixels.copyOf(), w, h)
             progress = when (step) { 8 -> 0.25f; 4 -> 0.5f; 2 -> 0.75f; else -> 1f }
         }
         vm.c.unlock("fractal")
@@ -148,6 +142,14 @@ private fun FractalPanel(vm: VizViewModel, julia: Boolean) {
     val zoom = 3.2 / (view.scale * max(1, size.width))
     Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(20.dp))
         .onSizeChanged { if (it != size) { val old = size; size = it; if (old.width == 0) { val s = 3.2 / it.width; if (julia) vm.jView = vm.jView.copy(scale = s) else vm.mView = vm.mView.copy(scale = s) } } }
+        .wheelZoom { f, x, y ->
+            val v0 = if (julia) vm.jView else vm.mView
+            val sw = size.width.toDouble(); val sh = size.height.toDouble()
+            val wx = v0.centerX + (x - sw / 2) * v0.scale; val wy = v0.centerY + (y - sh / 2) * v0.scale
+            val ns = (v0.scale / f).coerceIn(1e-15, 0.05)
+            val nv = FractalView(wx - (x - sw / 2) * ns, wy - (y - sh / 2) * ns, ns)
+            if (julia) vm.jView = nv else vm.mView = nv
+        }
         .pointerInput(julia) {
             detectTransformGestures { centroid, pan, zoomBy, _ ->
                 val v0 = if (julia) vm.jView else vm.mView
@@ -194,7 +196,7 @@ private fun FractalPanel(vm: VizViewModel, julia: Boolean) {
     })
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(onClick = { val s = 3.2 / max(1, size.width); if (julia) vm.jView = FractalView(0.0, 0.0, s) else vm.mView = FractalView(-0.6, 0.0, s) }) { Text("Reset view") }
-        OutlinedButton(onClick = { bitmap?.let { Share.image(ctx, it, if (julia) "julia" else "mandelbrot") } }) { Icon(Icons.Outlined.Share, null); Spacer(Modifier.width(6.dp)); Text("Share image") }
+        OutlinedButton(onClick = { image?.let { platform.shareImage(it, if (julia) "julia" else "mandelbrot") } }) { Icon(Icons.Outlined.Share, null); Spacer(Modifier.width(6.dp)); Text("Share image") }
     }
     InfoPanel(if (julia) "Julia set J(c): points z whose orbit under z ↦ z² + c stays bounded. Connected exactly when c lies in the Mandelbrot set." else "Mandelbrot set: values c for which z ↦ z² + c starting from 0 stays bounded. Colours show a smooth escape count; black points did not escape within the iteration limit.")
 }

@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -35,7 +34,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.quantumath.app.AppContainer
 import com.quantumath.app.ProgressRepository
-import com.quantumath.app.container
 import com.quantumath.app.data.Favorite
 import com.quantumath.app.data.Kind
 import com.quantumath.app.data.Note
@@ -49,6 +47,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.quantumath.app.platform.LocalAppContainer
 
 // =============================== Learning hub ===============================
 
@@ -141,14 +140,14 @@ class LessonViewModel(private val c: AppContainer, val lesson: Lesson?) : ViewMo
 fun LessonScreen(nav: NavHostController, id: String) {
     val lesson = Lessons.byId(id)
     val vm = appViewModel { LessonViewModel(it, lesson) }
-    val ctx = LocalContext.current
-    val favs by ctx.container.favoriteKeys.collectAsStateWithLifecycle()
+    val container = LocalAppContainer.current
+    val favs by container.favoriteKeys.collectAsStateWithLifecycle()
     val lab = LocalLab.current
     if (lesson == null) { Column { LabTopBar("Lesson", onBack = { nav.popBackStack() }); ErrorPanel("Lesson not found", Modifier.padding(16.dp)) }; return }
     val key = "lesson:${lesson.id}"
     Column(Modifier.fillMaxSize()) {
         LabTopBar(lesson.title, onBack = { nav.popBackStack() }, subtitle = "${lesson.topic} · ${lesson.level.label} · ${lesson.minutes} min", actions = {
-            IconButton(onClick = { ctx.container.toggleFavorite(Favorite(key, Kind.LESSON, lesson.title, lesson.summary)) }) {
+            IconButton(onClick = { container.toggleFavorite(Favorite(key, Kind.LESSON, lesson.title, lesson.summary)) }) {
                 Icon(if (key in favs) Icons.Filled.Star else Icons.Outlined.StarOutline, if (key in favs) "Remove from favorites" else "Add to favorites", tint = if (key in favs) lab.warning else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         })
@@ -351,8 +350,8 @@ fun FormulaScreen(nav: NavHostController, initial: String) {
     var query by rememberSaveable { mutableStateOf(initial) }
     var category by rememberSaveable { mutableStateOf("All") }
     var expanded by rememberSaveable { mutableStateOf(initial) }
-    val ctx = LocalContext.current
-    val favs by ctx.container.favoriteKeys.collectAsStateWithLifecycle()
+    val container = LocalAppContainer.current
+    val favs by container.favoriteKeys.collectAsStateWithLifecycle()
     val lab = LocalLab.current
     val list = FormulaLibrary.search(query).filter { category == "All" || it.category == category }
     Column(Modifier.fillMaxSize()) {
@@ -372,7 +371,7 @@ fun FormulaScreen(nav: NavHostController, initial: String) {
                                 Text(f.name, style = MaterialTheme.typography.titleSmall)
                                 Text(f.category, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                             }
-                            IconButton(onClick = { ctx.container.toggleFavorite(Favorite(key, Kind.FORMULA, f.name, f.formula)) }) {
+                            IconButton(onClick = { container.toggleFavorite(Favorite(key, Kind.FORMULA, f.name, f.formula)) }) {
                                 Icon(if (key in favs) Icons.Filled.Star else Icons.Outlined.StarOutline, if (key in favs) "Unstar" else "Star", tint = if (key in favs) lab.warning else MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
@@ -381,7 +380,7 @@ fun FormulaScreen(nav: NavHostController, initial: String) {
                             Column(Modifier.padding(top = 8.dp)) {
                                 f.variables.forEach { (k, v) -> KeyValue(k, v, mono = false) }
                                 Text("Example: ${f.example}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(top = 6.dp))
-                                TextButton(onClick = { ctx.container.saveNote(Note(title = f.name, kind = Kind.FORMULA, input = f.name, result = f.formula, body = f.example)) }) { Icon(Icons.Outlined.BookmarkAdd, null); Spacer(Modifier.width(6.dp)); Text("Save to notebook") }
+                                TextButton(onClick = { container.saveNote(Note(title = f.name, kind = Kind.FORMULA, input = f.name, result = f.formula, body = f.example)) }) { Icon(Icons.Outlined.BookmarkAdd, null); Spacer(Modifier.width(6.dp)); Text("Save to notebook") }
                             }
                         }
                     }

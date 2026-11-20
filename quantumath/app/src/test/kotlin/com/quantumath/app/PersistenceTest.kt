@@ -24,7 +24,7 @@ class PersistenceTest {
 
     @Before fun setUp() {
         ctx = ApplicationProvider.getApplicationContext()
-        db = AppDatabase.build(ctx, inMemory = true)
+        db = buildAndroidDatabase(ctx, inMemory = true)
         val f = File(ctx.cacheDir, "test-${System.nanoTime()}.preferences_pb")
         settings = SettingsRepository(PreferenceDataStoreFactory.create { f })
     }

@@ -1,9 +1,7 @@
 package com.quantumath.app.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -35,11 +33,7 @@ data class AppSettings(
     val exactResults: Boolean = true,
 )
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
 class SettingsRepository(private val store: DataStore<Preferences>) {
-    constructor(context: Context) : this(context.dataStore)
-
     private object K {
         val theme = stringPreferencesKey("theme"); val accent = stringPreferencesKey("accent"); val degrees = booleanPreferencesKey("degrees")
         val precision = intPreferencesKey("precision"); val style = stringPreferencesKey("style"); val grouping = booleanPreferencesKey("grouping")

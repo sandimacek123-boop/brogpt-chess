@@ -96,10 +96,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun favorites(): FavoriteDao
     abstract fun progress(): ProgressDao
     abstract fun graphs(): GraphDao
-
-    companion object {
-        fun build(context: android.content.Context, inMemory: Boolean = false): AppDatabase =
-            (if (inMemory) Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
-            else Room.databaseBuilder(context, AppDatabase::class.java, "quantumath.db")).build()
-    }
 }

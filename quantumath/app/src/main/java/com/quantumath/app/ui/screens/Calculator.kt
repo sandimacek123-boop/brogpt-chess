@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -40,7 +39,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import com.quantumath.app.AppContainer
-import com.quantumath.app.container
 import com.quantumath.app.data.Kind
 import com.quantumath.app.data.Note
 import com.quantumath.app.ui.components.*
@@ -49,7 +47,6 @@ import com.quantumath.app.ui.nav.openTool
 import com.quantumath.app.ui.theme.LocalHaptics
 import com.quantumath.app.ui.theme.LocalLab
 import com.quantumath.app.ui.theme.MonoFamily
-import com.quantumath.app.util.Share
 import com.quantumath.app.util.computeLimited
 import com.quantumath.app.util.friendlyError
 import com.quantumath.math.complex.ComplexEvaluator
@@ -71,6 +68,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
+import com.quantumath.app.platform.LocalPlatform
+import com.quantumath.app.platform.LocalAppContainer
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusable
 
 data class CalcResult(val input: String, val decimal: String, val exact: String?, val fraction: String?, val note: String?, val value: BigDecimal?)
 
@@ -230,11 +233,31 @@ fun CalculatorScreen(nav: NavHostController, initial: String) {
     LaunchedEffect(initial) { vm.setInitial(initial) }
     val ui by vm.ui.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
-    val ctx = LocalContext.current
-    val settings by ctx.container.settings.collectAsStateWithLifecycle()
+    val settings by LocalAppContainer.current.settings.collectAsStateWithLifecycle()
     var showHistory by remember { mutableStateOf(false) }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(ui.systemKeyboard) { if (!ui.systemKeyboard) runCatching { focus.requestFocus() } }
 
-    Column(Modifier.fillMaxSize()) {
+    // physical keyboard: digits/operators/letters insert, Enter or = evaluates, Backspace, Esc/Delete clears, ←/→ move the cursor
+    Column(Modifier.fillMaxSize().focusRequester(focus).focusable().onPreviewKeyEvent { e ->
+        if (ui.systemKeyboard || e.type != KeyEventType.KeyDown) false else when (e.key) {
+            Key.Enter, Key.NumPadEnter -> { vm.evaluate(); true }
+            Key.Backspace -> { vm.backspace(); true }
+            Key.Escape, Key.Delete -> { vm.clear(); true }
+            Key.DirectionLeft -> { vm.move(-1); true }
+            Key.DirectionRight -> { vm.move(1); true }
+            else -> {
+                val cp = e.utf16CodePoint
+                val c = if (cp in 1..0xFFFE) cp.toChar() else keyChar(e.key, e.isShiftPressed)
+                when {
+                    e.isCtrlPressed || e.isMetaPressed || e.isAltPressed -> false
+                    c == '=' -> { vm.evaluate(); true }
+                    c.isLetterOrDigit() || c in ".+-*/^()!%, " -> { vm.insert(c.toString()); true }
+                    else -> false
+                }
+            }
+        }
+    }) {
         LabTopBar("Calculator", subtitle = "${settings.precision} significant digits · ${if (settings.degrees) "DEG" else "RAD"}", actions = {
             IconButton(onClick = { nav.navigate("solver") }) { Icon(Icons.Outlined.Functions, "Open equation solver") }
             IconButton(onClick = { showHistory = true }) { Icon(Icons.Outlined.History, "Calculation history") }
@@ -244,10 +267,10 @@ fun CalculatorScreen(nav: NavHostController, initial: String) {
             val landscape = maxWidth > maxHeight * 1.15f
             if (landscape) Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Display(ui, vm, Modifier.weight(1f).fillMaxHeight(), settings.degrees, nav)
-                Keypad(ui, vm, Modifier.weight(1.2f).fillMaxHeight(), settings.degrees)
+                Keypad(ui, vm, Modifier.weight(1.2f).fillMaxHeight(), settings.degrees) { runCatching { focus.requestFocus() } }
             } else Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Display(ui, vm, Modifier.weight(0.8f).fillMaxWidth(), settings.degrees, nav)
-                Keypad(ui, vm, Modifier.weight(1.45f).fillMaxWidth(), settings.degrees)
+                Keypad(ui, vm, Modifier.weight(1.45f).fillMaxWidth(), settings.degrees) { runCatching { focus.requestFocus() } }
             }
         }
     }
@@ -263,7 +286,7 @@ fun CalculatorScreen(nav: NavHostController, initial: String) {
 @Composable
 private fun Display(ui: CalcUi, vm: CalculatorViewModel, modifier: Modifier, degrees: Boolean, nav: NavHostController) {
     val lab = LocalLab.current
-    val ctx = LocalContext.current
+    val platform = LocalPlatform.current
     Surface(modifier, shape = RoundedCornerShape(24.dp), color = lab.panel, border = BorderStroke(1.dp, lab.panelBorder)) {
         Column(Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -272,8 +295,8 @@ private fun Display(ui: CalcUi, vm: CalculatorViewModel, modifier: Modifier, deg
                 if (ui.memory.signum() != 0) Text("M", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 ui.result?.let { r ->
-                    IconButton(onClick = { Share.copy(ctx, "Result", r.decimal) }) { Icon(Icons.Outlined.ContentCopy, "Copy result") }
-                    IconButton(onClick = { Share.text(ctx, "${r.input} = ${listOfNotNull(r.exact, r.fraction, r.decimal).joinToString(" = ")}") }) { Icon(Icons.Outlined.Share, "Share result") }
+                    IconButton(onClick = { platform.copy("Result", r.decimal) }) { Icon(Icons.Outlined.ContentCopy, "Copy result") }
+                    IconButton(onClick = { platform.shareText("${r.input} = ${listOfNotNull(r.exact, r.fraction, r.decimal).joinToString(" = ")}") }) { Icon(Icons.Outlined.Share, "Share result") }
                     IconButton(onClick = vm::saveToNotebook) { Icon(Icons.Outlined.BookmarkAdd, "Save to notebook") }
                 }
             }
@@ -321,7 +344,7 @@ private fun Display(ui: CalcUi, vm: CalculatorViewModel, modifier: Modifier, deg
 private data class K(val label: String, val insert: String? = null, val action: (() -> Unit)? = null, val kind: Int = 0, val desc: String = label)
 
 @Composable
-private fun Keypad(ui: CalcUi, vm: CalculatorViewModel, modifier: Modifier, degrees: Boolean) {
+private fun Keypad(ui: CalcUi, vm: CalculatorViewModel, modifier: Modifier, degrees: Boolean, onKey: () -> Unit = {}) {
     val s = ui.second
     val memRow = listOf(
         K("2nd", action = vm::toggleSecond, kind = if (s) 3 else 1, desc = "Second function layer"),
@@ -346,13 +369,14 @@ private fun Keypad(ui: CalcUi, vm: CalculatorViewModel, modifier: Modifier, degr
     val useHaptics = LocalHaptics.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth().weight(0.7f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (k in memRow) KeyButton(k, Modifier.weight(1f).fillMaxHeight(), small = true) { if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); k.action?.invoke() }
+            for (k in memRow) KeyButton(k, Modifier.weight(1f).fillMaxHeight(), small = true) { if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); k.action?.invoke(); onKey() }
         }
         for (row in rows) Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (k in row) KeyButton(k, Modifier.weight(1f).fillMaxHeight()) {
                 if (useHaptics) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 if (k.action != null) k.action.invoke() else k.insert?.let { vm.insert(it) }
                 if (s && k.insert != null) vm.toggleSecond()
+                onKey() // keep keyboard focus on the calculator after a click (desktop / hardware keyboards)
             }
         }
     }
@@ -375,4 +399,16 @@ private fun KeyButton(k: K, modifier: Modifier, small: Boolean = false, onClick:
             Text(k.label, color = fg, style = if (small) MaterialTheme.typography.labelMedium else if (k.kind == 2) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium, maxLines = 1)
         }
     }
+}
+
+/** Character for a key when the event carries no text (numpad, synthetic events). */
+private fun keyChar(k: Key, shift: Boolean): Char = when (k) {
+    Key.Zero, Key.NumPad0 -> if (shift && k == Key.Zero) ')' else '0'
+    Key.One, Key.NumPad1 -> '1'; Key.Two, Key.NumPad2 -> '2'; Key.Three, Key.NumPad3 -> '3'; Key.Four, Key.NumPad4 -> '4'
+    Key.Five, Key.NumPad5 -> if (shift && k == Key.Five) '%' else '5'; Key.Six, Key.NumPad6 -> if (shift && k == Key.Six) '^' else '6'
+    Key.Seven, Key.NumPad7 -> '7'; Key.Eight, Key.NumPad8 -> if (shift && k == Key.Eight) '*' else '8'
+    Key.Nine, Key.NumPad9 -> if (shift && k == Key.Nine) '(' else '9'
+    Key.NumPadAdd -> '+'; Key.NumPadSubtract, Key.Minus -> '-'; Key.NumPadMultiply -> '*'; Key.NumPadDivide, Key.Slash -> '/'
+    Key.NumPadDot, Key.Period -> '.'; Key.Equals -> if (shift) '+' else '='; Key.Comma -> ','
+    else -> '\u0000'
 }
