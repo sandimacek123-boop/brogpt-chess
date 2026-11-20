@@ -132,13 +132,13 @@ The desktop app compiles the **same shared source** (all screens, ViewModels, th
 | Check | Result |
 |---|---|
 | Desktop tests (`:desktop:test`, headless Compose UI) | ✅ 6 / 6 |
-| `desktop/packaging/build-windows.sh` | ✅ `Quantumath-1.0.0-Setup.exe`, 102,259,732 bytes |
-| Installer structure (`file`, `7z l`) | ✅ NSIS installer (PE32 GUI), 322 files. It contains `Quantumath.exe` (NSIS launcher), `app/quantumath.jar` (79.6 MB), the icon, the uninstaller, and a Temurin 21.0.13.1 x64 JRE (`javaw.exe` is a PE32+ x86-64 binary; `jvm.dll` and `awt.dll` are present). |
+| `desktop/packaging/build-windows.sh` | ✅ `Quantumath-1.0.0-Setup.exe`, 36,669,324 bytes (unused Material icons stripped from the jar; minimal jlink runtime) |
+| Installer structure (`file`, `7z l`, `7z t`) | ✅ NSIS installer (PE32 GUI), 166 files. It contains `Quantumath.exe` (NSIS launcher), `app/quantumath.jar` (icons the code never references are removed: 11,294 classes dropped, 91 kept), the icon, the uninstaller, and a minimal Temurin 21.0.13.1 x64 runtime made with jlink (modules: base, desktop, instrument, logging, unsupported, charsets, localedata, accessibility; `javaw.exe` is a PE32+ x86-64 binary). `7z t` passes. |
 | Jar contents | ✅ contains `skiko-windows-x64.dll` (Windows Skia renderer); Linux natives are excluded. |
-| Same jar launched as a real window | ✅ on Linux under Xvfb, adding only the Linux Skia library: the window opens at 1280×840 with no errors in the log. |
+| Same jar launched as a real window | ✅ on Linux under Xvfb, using a Linux jlink runtime with the identical module set and adding only the Linux Skia library: the window opens at 1280×840 with no errors in the log. `jdeps` confirms the module list. |
 | Run on Windows / under Wine | ❌ **not possible in this environment**. Wine 9.0 crashes inside libc before running any Windows program (even `cmd /c echo`) on this container's kernel, so the installer and launcher were never executed. |
 
-SHA-256: `7598554d8d22b1fa3ca2f6787200d8cfd0178e1be3f431b6fdfa0c8327bc6321  Quantumath-1.0.0-Setup.exe`
+SHA-256: `b0dd81a79bb2a0714a5c46db620d87a4d8b6f4a008cacbfd26eeeaf58abddb83  Quantumath-1.0.0-Setup.exe`
 
 **Desktop UI tests:**
 - **Calculator:** `2+3×4 = 14` by clicking; `1/3` typed on the keyboard plus Enter gives `= 1/3`.

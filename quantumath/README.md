@@ -10,7 +10,7 @@ A native, offline app (Kotlin, Jetpack Compose, Material 3) for calculating, sol
 
 ### Windows
 
-Run **`Quantumath-1.0.0-Setup.exe`**. It installs for your user account only (no administrator rights needed) into `%LOCALAPPDATA%\Programs\Quantumath`, with a Start-menu entry, an optional desktop shortcut and an uninstaller (Settings → Apps). Quantumath brings its own Java runtime, so nothing else needs to be installed. Windows 10 or 11 x64.
+Run **`Quantumath-1.0.0-Setup.exe`** (~37 MB; a prebuilt copy is in [`dist/`](dist/)). It installs for your user account only (no administrator rights needed) into `%LOCALAPPDATA%\Programs\Quantumath`, with a Start-menu entry, an optional desktop shortcut and an uninstaller (Settings → Apps). Quantumath brings its own Java runtime, so nothing else needs to be installed. Windows 10 or 11 x64.
 
 The installer is not code-signed, so SmartScreen may say "Windows protected your PC". Click **More info → Run anyway**. Your data lives in `%APPDATA%\Quantumath` and is kept on uninstall. If the window ever renders incorrectly on an unusual graphics driver, set the environment variable `QUANTUMATH_SOFTWARE_RENDER=1`.
 
@@ -76,7 +76,7 @@ desktop/packaging/build-windows.sh      # → output/Quantumath-1.0.0-Setup.exe 
 
 `build-windows.sh` performs these steps:
 1. Builds a self-contained jar with the Windows Skia natives (`:desktop:windowsJar`).
-2. Downloads a Temurin 21 JRE for Windows x64 (or uses `JRE_ZIP=/path/to/jre.zip`).
+2. Strips unused Material icons from the jar and builds a minimal Windows Java 21 runtime with `jlink`. It downloads the Windows and Linux Temurin JDKs of the same version, or you can point `WIN_JDK` / `LINUX_JDK` at extracted JDK folders.
 3. Compiles the small `Quantumath.exe` launcher and the installer with NSIS (`makensis`, e.g. `apt install nsis`).
 
 On Windows you can also use `./gradlew :desktop:packageMsi` (jpackage + WiX) instead.
