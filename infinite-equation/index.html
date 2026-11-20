@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>The Infinite Equation</title>
+<style>
+  @font-face { font-family: "KaTeX_Main"; src: url(node_modules/katex/dist/fonts/KaTeX_Main-Regular.woff2) format("woff2"); }
+  @font-face { font-family: "KaTeX_Math"; font-style: italic; src: url(node_modules/katex/dist/fonts/KaTeX_Math-Italic.woff2) format("woff2"); }
+  @font-face { font-family: "KaTeX_Size1"; src: url(node_modules/katex/dist/fonts/KaTeX_Size1-Regular.woff2) format("woff2"); }
+  @font-face { font-family: "KaTeX_Size2"; src: url(node_modules/katex/dist/fonts/KaTeX_Size2-Regular.woff2) format("woff2"); }
+  @font-face { font-family: "Cormorant Garamond"; font-weight: 600; src: url(node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Inter"; font-weight: 300; src: url(node_modules/@fontsource/inter/files/inter-latin-300-normal.woff2) format("woff2"); }
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #8ab; font: 12px monospace; z-index: 2; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "./node_modules/three/build/three.module.js",
+  "three/addons/": "./node_modules/three/examples/jsm/",
+  "opentype.js": "./node_modules/opentype.js/dist/opentype.module.js"
+} }
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
