@@ -1,4 +1,4 @@
-// QC helper: bundle once, render chosen frames to out/stills/ (half size).
+// QC helper: bundle once, render chosen frames to out/stills/ (half size, or SCALE=1).
 // node scripts/stills.mjs 150 400 650 ...
 import path from 'node:path';
 import {bundle} from '@remotion/bundler';
@@ -8,6 +8,6 @@ const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE;
 const serveUrl = await bundle({entryPoint: path.resolve('src/index.ts')});
 const composition = await selectComposition({serveUrl, id: 'Miha', browserExecutable});
 for (const frame of process.argv.slice(2).map(Number)) {
-  await renderStill({composition, serveUrl, frame, output: `out/stills/f${String(frame).padStart(4, '0')}.png`, scale: 0.5, browserExecutable});
+  await renderStill({composition, serveUrl, frame, output: `out/stills/f${String(frame).padStart(4, '0')}.png`, scale: Number(process.env.SCALE ?? 0.5), browserExecutable});
   console.log('frame', frame);
 }

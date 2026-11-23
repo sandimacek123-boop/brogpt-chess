@@ -1,6 +1,7 @@
 // Drawing primitives for the Miha film: everything is plain SVG, seeded and
 // frame-deterministic, so the same frame always renders the same picture.
 import React from 'react';
+import {useCurrentFrame} from 'remotion';
 
 export const W = 1920;
 export const H = 1080;
@@ -455,6 +456,27 @@ export const Motes = ({seed, n, f, color = '#FFF2C2', area = [0, 0, W, H]}: {see
   );
 };
 
+/** Fireflies: wander slowly and blink on and off */
+export const Fireflies = ({seed, n, f, area = [0, 0, W, H]}: {seed: number; n: number; f: number; area?: number[]}) => {
+  const r = rng(seed);
+  const [ax, ay, aw, ah] = area;
+  return (
+    <g>
+      {Array.from({length: n}, (_, i) => {
+        const x = ax + r() * aw + Math.sin(f / (40 + r() * 30) + i) * 34;
+        const y = ay + r() * ah + Math.cos(f / (35 + r() * 30) + i * 2) * 22;
+        const on = Math.pow(Math.max(0, Math.sin(f / (14 + r() * 12) + r() * 6)), 4);
+        return (
+          <g key={i} opacity={on}>
+            <circle cx={x} cy={y} r={11} fill="#FFE27A" opacity={0.25} />
+            <circle cx={x} cy={y} r={2.8} fill="#FFF8D2" />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
 /** Falling leaves or petals */
 export const Falling = ({seed, n, f, colors, size = 10, area = [0, -100, W, H + 200], speed = 1}: {seed: number; n: number; f: number; colors: string[]; size?: number; area?: number[]; speed?: number}) => {
   const r = rng(seed);
@@ -488,7 +510,13 @@ export const Person = ({x, y, h, look = {}, child = false, f = 0, walk = 0, flip
   const shoulder = child ? -70 : -79;
   const hip = child ? -40 : -46;
   const sw = walk ? Math.sin((f / FPS) * Math.PI * 2 * 1.4) * 14 * walk : 0;
-  const blink = (Math.floor(f) + Math.floor(Math.abs(x) * 7)) % 110 < 3;
+  // global clock, so every face blinks even when the scene passes no f; each face gets its own rhythm
+  const now = useCurrentFrame() / SUB;
+  const id = [...`${look.top}${look.hair}${h}`].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 9973, 7);
+  const period = 100 + (id % 80);
+  const tb = now + id * 3.7;
+  const lid = (u: number) => (u < 0 || u > 7 ? 1 : u < 2 ? 1 - u / 2 : u < 3 ? 0 : ease((u - 3) / 4));
+  const open = Math.min(lid(tb % period), Math.floor(tb / period) % 3 === 0 ? lid((tb % period) - 10) : 1); // every third blink is a double
   return (
     <g transform={`translate(${x},${y}) scale(${(flip ? -1 : 1) * (h / 100)},${h / 100})`}>
       {shadow && <ellipse cx={0} cy={0} rx={child ? 13 : 16} ry={3.2} fill="#000" opacity={0.16} />}
@@ -513,10 +541,15 @@ export const Person = ({x, y, h, look = {}, child = false, f = 0, walk = 0, flip
         <circle cx={0.8} cy={head.cy + 0.5} r={head.r} fill={skin} />
         {look.hair && <path d={`M${-head.r - 0.5},${head.cy} a${head.r + 0.5},${head.r + 0.5} 0 0 1 ${head.r * 2 + 1},-2 q-${head.r},-${head.r * 0.4} -${head.r * 2 + 1},2 z`} fill={hair} />}
         {skin !== SIL && (
-          <g fill="#2A1E1A">
-            <ellipse cx={head.r * 0.3} cy={head.cy + head.r * 0.08} rx={head.r * 0.11} ry={head.r * (blink ? 0.02 : 0.14)} />
-            <ellipse cx={head.r * 0.8} cy={head.cy + head.r * 0.08} rx={head.r * 0.1} ry={head.r * (blink ? 0.02 : 0.13)} />
-            <circle cx={head.r * 0.66} cy={head.cy + head.r * 0.48} r={head.r * 0.2} fill="#E8857A" opacity={0.35} />
+          <g>
+            {[[0.3, 0.12], [0.8, 0.11]].map(([ex, rx]) => (
+              <g key={ex}>
+                <ellipse cx={head.r * ex} cy={head.cy + head.r * 0.04} rx={head.r * rx} ry={head.r * Math.max(0.025, 0.17 * open)} fill="#2A1E1A" />
+                {open > 0.6 && <circle cx={head.r * (ex + 0.04)} cy={head.cy - head.r * 0.04} r={head.r * 0.05} fill="#fff" opacity={0.9 * open} />}
+              </g>
+            ))}
+            <circle cx={head.r * 0.2} cy={head.cy + head.r * 0.45} r={head.r * 0.19} fill="#E8857A" opacity={0.35} />
+            <path d={`M${head.r * 0.42},${head.cy + head.r * 0.52} q${head.r * 0.2},${head.r * 0.17} ${head.r * 0.42},-${head.r * 0.03}`} stroke="#7A3B30" strokeWidth={head.r * 0.08} fill="none" strokeLinecap="round" />
           </g>
         )}
         {look.hat && (

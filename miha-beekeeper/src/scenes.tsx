@@ -2,7 +2,7 @@
 // (f = 24 when it is fully on screen) and its duration, and returns SVG.
 import React from 'react';
 import {
-  Bee, BeeHouse, Birds, Bokeh, Land, Butterflies, Church, Clouds, CombFrame, Falling, Grass, Flowers, Forest, Glow, Grad, Hive, HoneyJar, House, Kozolec, Mist, Motes, Person, RoundTree,
+  Bee, BeeHouse, Birds, Bokeh, Land, Butterflies, Church, Clouds, CombFrame, Falling, Grass, Flowers, Forest, Glow, Grad, Hive, HoneyJar, House, Kozolec, Mist, Motes, Fireflies, Person, RoundTree,
   SANS, SERIF, Sky, Spruce, Stars, Sun, Swarm, Triglav, W, H, clamp, easeOut, hexGrid, hexPoints, lerp, makeRidge, ramp, rng,
 } from './lib';
 
@@ -78,7 +78,7 @@ export const Title = ({f, dur}: SceneProps) => {
         1945 — 2024
       </text>
       <text x={960} y={428} textAnchor="middle" fontFamily={SERIF} fontStyle="italic" fontSize={38} fill="#FFF4E3" opacity={ramp(f, 105, 140)}>
-        a Slovenian life among the bees
+        slovensko življenje med čebelami
       </text>
       {trail.length > 1 && <polyline points={trail.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke="#FFD27A" strokeWidth={3} strokeDasharray="2 12" strokeLinecap="round" opacity={0.75} />}
       {f > 30 && <Bee x={bx} y={by} s={1.6} rot={(Math.atan2(by2 - by, bx2 - bx) * 180) / Math.PI} f={f} />}
@@ -355,7 +355,7 @@ export const OwnHives = ({f, dur}: SceneProps) => {
         <rect x={1260} y={160} width={610} height={440} fill="#000" opacity={0.18} transform="translate(12,16)" />
         <BigPanel x={1282} y={182} w={566} h={396} reveal={clamp((f - 70) / 170)} />
         <text x={1565} y={650} textAnchor="middle" fontFamily={SERIF} fontStyle="italic" fontSize={34} fill="#FFF8EC" style={{filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.4))'}}>
-          panjska končnica · painted hive front
+          panjska končnica · ljudska umetnost
         </text>
       </g>
     </Cam>
@@ -577,10 +577,10 @@ export const BeeDay = ({f, dur}: SceneProps) => {
       )}
       {orbit.filter((o) => o.front).map((o, i) => beeAt(o, i + 20))}
       <text x={cx} y={175} textAnchor="middle" fontFamily={SERIF} fontWeight={700} fontSize={84} fill="#3A2410" opacity={ramp(f, 30, 60)}>
-        20 May · World Bee Day
+        20. maj · Svetovni dan čebel
       </text>
       <text x={cx} y={228} textAnchor="middle" fontFamily={SANS} fontWeight={600} fontSize={21} letterSpacing={5} fill="#5A3A16" opacity={ramp(f, 50, 80)}>
-        PROPOSED BY SLOVENIA · ANTON JANŠA'S BIRTHDAY
+        NA POBUDO SLOVENIJE · ROJSTNI DAN ANTONA JANŠE
       </text>
     </Cam>
   );
@@ -633,6 +633,9 @@ export const Autumn = ({f, dur}: SceneProps) => {
       <rect x={-200} y={-200} width={W + 400} height={H + 400} fill="#1A0F2A" opacity={ramp(f, 180, 300) * 0.35} />
       <Falling seed={106} n={45} f={f} colors={['#E3A33B', '#F2C14E', '#C9792F']} size={9} speed={0.7} />
       <Motes seed={107} n={30} f={f} color="#FFD9A0" />
+      <g opacity={ramp(f, 110, 190)}>
+        <Fireflies seed={109} n={22} f={f} area={[80, 560, 1760, 260]} />
+      </g>
       <Bokeh seed={110} n={10} f={f} color="#FFC98A" opacity={0.18} />
     </Cam>
   );
@@ -670,7 +673,7 @@ export const Outro = ({f, dur}: SceneProps) => (
       čebelar · dedek · Slovenec
     </text>
     <text x={960} y={540} textAnchor="middle" fontFamily={SANS} fontWeight={500} fontSize={20} letterSpacing={6} fill="#C9C3D8" opacity={ramp(f, 110, 145)}>
-      BEEKEEPER · GRANDFATHER · SLOVENIAN
+      HVALA ZA MED, DEDEK
     </text>
     <Bee x={960 + Math.sin(f / 20) * 160} y={620 + Math.sin(f / 13) * 30} s={1.3} rot={Math.cos(f / 20) > 0 ? 0 : 180} f={f} />
   </Cam>
@@ -1003,8 +1006,9 @@ export const Anniversary = ({f, dur}: SceneProps) => {
         <path d={`M740,360 Q1100,600 1440,610`} stroke="#3a2a20" strokeWidth={2} fill="none" />
         {bulbs.map((b, i) => (
           <g key={i}>
-            <circle cx={b.x} cy={b.y + 8} r={17} fill="#FFD27A" opacity={0.28 + 0.08 * Math.sin(f / 6 + i)} />
-            <circle cx={b.x} cy={b.y + 8} r={6} fill="#FFF0C4" />
+            {/* a slow twinkle that chases along the string */}
+            <circle cx={b.x} cy={b.y + 8} r={17} fill="#FFD27A" opacity={0.12 + 0.34 * Math.pow(0.5 + 0.5 * Math.sin(f / 7 - i * 0.9), 2)} />
+            <circle cx={b.x} cy={b.y + 8} r={6} fill="#FFF0C4" opacity={0.7 + 0.3 * Math.pow(0.5 + 0.5 * Math.sin(f / 7 - i * 0.9), 2)} />
           </g>
         ))}
         {fam.map((p, i) => (

@@ -11,10 +11,12 @@ import {Anniversary, Autumn, BeeDay, Bled, Birth, Daughter, Dedek, Freedom, Gran
 // wait for every weight (incl. latin-ext for č š ž) before the first frame is captured
 const fontsReady = delayRender('fonts');
 Promise.all(
-  ['400 40px "Playfair Display"', 'italic 400 40px "Playfair Display"', '700 40px "Playfair Display"', '500 20px Montserrat', '600 20px Montserrat'].map((font) => document.fonts.load(font, 'Miha čšž ŠČŽ')),
+  ['400 40px "Playfair Display"', 'italic 400 40px "Playfair Display"', '700 40px "Playfair Display"', '500 20px Montserrat', '600 20px Montserrat'].map((font) => document.fonts.load(font, 'Miha čšž ŠČŽ »«')),
 ).then(() => continueRender(fontsReady));
 
 const BORN = 1945;
+// Slovenian plural of "leto" (year): 1 leto, 2 leti, 3–4 leta, 5+ let
+const yearsWord = (n: number) => (n % 100 === 1 ? 'LETO' : n % 100 === 2 ? 'LETI' : n % 100 === 3 || n % 100 === 4 ? 'LETA' : 'LET');
 const T = 24; // transition length in frames; every scene is fully on screen at its start frame
 type Caption = {text: string; from: number; to: number};
 type Chapter = {C: (p: SceneProps) => React.ReactElement; start: number; end: number; year?: number; hex?: boolean; captions?: Caption[]};
@@ -22,27 +24,27 @@ type Chapter = {C: (p: SceneProps) => React.ReactElement; start: number; end: nu
 // one bar of the waltz = 2 s = 60 frames, so every chapter starts on a downbeat
 const CHAPTERS: Chapter[] = [
   {C: Title, start: 0, end: 240},
-  {C: Birth, start: 240, end: 480, year: 1945, hex: true, captions: [{text: 'Miha is born in a little village in *Gorenjska*, beneath the three peaks of Triglav.', from: 14, to: 232}]},
+  {C: Birth, start: 240, end: 480, year: 1945, hex: true, captions: [{text: 'Miha se rodi v majhni vasi na *Gorenjskem*, pod tremi vrhovi Triglava.', from: 14, to: 232}]},
   {C: Dedek, start: 480, end: 780, year: 1952, captions: [
-    {text: 'His *dedek* keeps bees. At seven, Miha holds his first honeycomb, and he is hooked for life.', from: 10, to: 150},
-    {text: 'The *kranjska čebela*: the gentle Carniolan honeybee, born right here in Slovenia.', from: 156, to: 292},
+    {text: 'Njegov dedek je *čebelar*. Pri sedmih letih Miha prvič drži satje in čebelam ostane zvest vse življenje.', from: 10, to: 150},
+    {text: '*Kranjska čebela*: krotka in pridna, doma prav tukaj, v Sloveniji.', from: 156, to: 292},
   ]},
-  {C: Planica, start: 780, end: 1020, year: 1960, captions: [{text: 'Every March he goes to *Planica* with his father, to watch the ski jumpers fly.', from: 10, to: 232}]},
-  {C: Bled, start: 1020, end: 1260, year: 1964, captions: [{text: 'Summers at Lake Bled: rowing a *pletna* to the island, ringing the wishing bell, *kremšnita* with friends.', from: 10, to: 232}]},
-  {C: Wedding, start: 1260, end: 1500, year: 1970, captions: [{text: 'He marries Marija in the church on the hill. The bells ring across the whole valley.', from: 10, to: 232}]},
-  {C: Daughter, start: 1500, end: 1740, year: 1973, captions: [{text: 'Their daughter Ana is born. Miha plants a linden tree, a *lipa*, in front of the house for her.', from: 10, to: 232}]},
+  {C: Planica, start: 780, end: 1020, year: 1960, captions: [{text: 'Vsak marec gre z očetom v *Planico* gledat skakalce, ki letijo kot ptice.', from: 10, to: 232}]},
+  {C: Bled, start: 1020, end: 1260, year: 1964, captions: [{text: 'Poletja preživlja na *Bledu*: s pletno na otok, zvon želja in *kremšnita* s prijatelji.', from: 10, to: 232}]},
+  {C: Wedding, start: 1260, end: 1500, year: 1970, captions: [{text: 'V cerkvici na hribu se poroči z *Marijo*. Zvonovi se slišijo po vsej dolini.', from: 10, to: 232}]},
+  {C: Daughter, start: 1500, end: 1740, year: 1973, captions: [{text: 'Rodi se jima hči Ana. Miha zanjo pred hišo posadi *lipo*.', from: 10, to: 232}]},
   {C: OwnHives, start: 1740, end: 2040, year: 1976, hex: true, captions: [
-    {text: 'Miha builds his own *čebelnjak*: twenty hives, every front painted by hand.', from: 14, to: 150},
-    {text: 'Each summer the jars line up on the bench. The honey tastes like linden, acacia and mountain meadow.', from: 156, to: 292},
+    {text: 'Miha si postavi svoj *čebelnjak*: dvajset panjev, vsaka končnica ročno poslikana.', from: 14, to: 150},
+    {text: 'Vsako poletje se na klopi vrstijo kozarci. *Med* ima okus po lipi, akaciji in gorskem travniku.', from: 156, to: 292},
   ]},
-  {C: Market, start: 2040, end: 2280, year: 1985, captions: [{text: 'On Saturdays he sells honey at the market in Ljubljana. Regulars come back every week for his *med*.', from: 10, to: 232}]},
-  {C: Freedom, start: 2280, end: 2520, year: 1991, captions: [{text: '25 June 1991. Slovenia declares independence. That night Miha opens a jar of his very best honey.', from: 10, to: 232}]},
-  {C: Grandkids, start: 2520, end: 2760, year: 2005, captions: [{text: 'Now *he* is the dedek. He teaches his grandkids to move slowly, and to talk softly to the bees.', from: 10, to: 232}]},
-  {C: BeeDay, start: 2760, end: 3000, year: 2018, hex: true, captions: [{text: 'The whole world celebrates the first World Bee Day, because Slovenia asked. Miha has been celebrating it his whole life.', from: 14, to: 232}]},
-  {C: Anniversary, start: 3000, end: 3240, year: 2020, captions: [{text: 'Fifty years with Marija. The whole family under Ana\'s *lipa*, now taller than the house.', from: 10, to: 232}]},
+  {C: Market, start: 2040, end: 2280, year: 1985, captions: [{text: 'Ob sobotah prodaja na ljubljanski *tržnici*. Stalne stranke se vsak teden vrnejo po njegov med.', from: 10, to: 232}]},
+  {C: Freedom, start: 2280, end: 2520, year: 1991, captions: [{text: 'Junij 1991: Slovenija je *samostojna*. »Danes so dovoljene sanje, jutri je nov dan.« Miha odpre svoj najboljši med.', from: 10, to: 232}]},
+  {C: Grandkids, start: 2520, end: 2760, year: 2005, captions: [{text: 'Zdaj je *on* dedek. Vnuke uči, naj se gibljejo počasi in s čebelami govorijo tiho.', from: 10, to: 232}]},
+  {C: BeeDay, start: 2760, end: 3000, year: 2018, hex: true, captions: [{text: 'Ves svet praznuje prvi *svetovni dan čebel*, ker je tako predlagala Slovenija. Miha ga praznuje že vse življenje.', from: 14, to: 232}]},
+  {C: Anniversary, start: 3000, end: 3240, year: 2020, captions: [{text: '*Zlata poroka*: petdeset let z Marijo. Vsa družina pod Anino lipo, ki je zdaj višja od hiše.', from: 10, to: 232}]},
   {C: Autumn, start: 3240, end: 3540, year: 2024, captions: [
-    {text: 'Autumn 2024. Miha, 79, sits by his hives one last golden evening.', from: 10, to: 160},
-    {text: 'He leaves forty hives, a valley full of flowers, and grandkids who still talk softly to the bees.', from: 166, to: 296},
+    {text: 'Jesen 2024. Miha, star 79 let, še zadnji zlati večer sedi ob svojih *panjih*.', from: 10, to: 160},
+    {text: 'Za seboj pusti štirideset panjev, dolino, polno cvetja, in vnuke, ki s čebelami še vedno govorijo *tiho*.', from: 166, to: 296},
   ]},
   {C: Outro, start: 3540, end: 3840, hex: true},
 ];
@@ -166,7 +168,7 @@ export const Miha = () => {
 
       <div style={{position: 'absolute', left: 84, top: 64, opacity: hudOn, textShadow: '0 2px 16px rgba(0,0,0,0.45)'}}>
         <div style={{fontFamily: SERIF, fontWeight: 700, fontSize: 84, lineHeight: 1, color: '#FFF6E5', fontVariantNumeric: 'tabular-nums'}}>{year}</div>
-        <div style={{fontFamily: SANS, fontWeight: 600, fontSize: 19, letterSpacing: 6, color: '#FFD27A', marginTop: 12}}>MIHA · AGE {age}</div>
+        <div style={{fontFamily: SANS, fontWeight: 600, fontSize: 19, letterSpacing: 6, color: '#FFD27A', marginTop: 12}}>MIHA · {age} {yearsWord(age)}</div>
       </div>
 
       <div style={{position: 'absolute', left: 260, right: 260, bottom: 54, height: 30, opacity: hudOn}}>

@@ -1,6 +1,6 @@
 # Miha: a Slovenian beekeeper's life
 
-A 2-minute illustrated short about Miha (1945–2024). He grew up in a village under Triglav and kept bees until he was 79. It's built with Remotion and exported in 4K (3840×2160) at 60 fps, H.264, with an original soundtrack and sound design. The scenes are authored at 1920×1080 in 30 fps time, then rendered at 2× scale with sub-frames for smooth 60 fps motion.
+A 2-minute illustrated short about Miha (1945–2024). He grew up in a village under Triglav and kept bees until he was 79. The whole film is in Slovenian: captions, titles and the year/age counter (with proper plurals: 1 leto, 2 leti, 3 leta, 5 let). It's built with Remotion and exported in 4K (3840×2160) at 60 fps, H.264, with an original soundtrack and sound design. The scenes are authored at 1920×1080 in 30 fps time, then rendered at 2× scale with sub-frames for smooth 60 fps motion.
 
 **Final export:** `out/Miha_Slovenian_Beekeeper.mp4`. It's a two-pass encode of the local 4K master, sized to fit under GitHub's 100 MB limit.
 
@@ -24,7 +24,7 @@ A 2-minute illustrated short about Miha (1945–2024). He grew up in a village u
 | 1:48 | 2024 (79) | His last autumn evening by the hives |
 | 1:58 | | Outro: "čebelar · dedek · Slovenec" |
 
-As the film moves between chapters, the year/age counter ticks forward and so does the life timeline at the bottom. Four of the transitions are honeycomb wipes. To keep the world alive, people blink and cast shadows, clouds and birds drift past, and grass and trees sway. There are also butterflies, swans, pigeons and a walking market crowd. For polish, the mountains are shaded and snow-capped, out-of-focus bokeh drifts across sunny shots, the camera floats slowly like it's handheld, and captions write on word by word.
+As the film moves between chapters, the year/age counter ticks forward and so does the life timeline at the bottom. Four of the transitions are honeycomb wipes. To keep the world alive, every face has eyes with catchlights and a smile, and blinks on its own rhythm (sometimes twice in a row). People cast shadows, the fairy lights at the golden wedding twinkle in a chase, fireflies blink on Miha's last evening, clouds and birds drift past, and grass and trees sway. There are also butterflies, swans, pigeons and a walking market crowd. For polish, the mountains are shaded and snow-capped, out-of-focus bokeh drifts across sunny shots, the camera floats slowly like it's handheld, and captions write on word by word.
 
 ## Soundtrack
 
