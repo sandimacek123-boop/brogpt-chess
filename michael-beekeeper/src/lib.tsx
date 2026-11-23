@@ -4,7 +4,8 @@ import React from 'react';
 
 export const W = 1920;
 export const H = 1080;
-export const FPS = 30;
+export const FPS = 30; // animation is authored in 30 fps units...
+export const SUB = 2; // ...and rendered at FPS * SUB = 60 fps (fractional f in between)
 export const SERIF = '"Playfair Display", Georgia, serif';
 export const SANS = 'Montserrat, Arial, sans-serif';
 
@@ -127,24 +128,27 @@ export const Triglav = ({x, y, s = 1, rock, shade, snow, snowShade}: {x: number;
 );
 
 // ------------------------------------------------------------------ flora
-export const Spruce = ({x, y, h, color, trunk = '#3b2a1e'}: {x: number; y: number; h: number; color: string; trunk?: string}) => {
+export const Spruce = ({x, y, h, color, trunk = '#3b2a1e', snow}: {x: number; y: number; h: number; color: string; trunk?: string; snow?: string}) => {
   const w = h * 0.46;
   let d = '';
+  let sd = '';
   for (let i = 0; i < 4; i++) {
     const ty = y - h + i * h * 0.19;
     const tw = w * (0.42 + i * 0.2);
     d += `M${x},${ty} L${x + tw / 2},${ty + h * 0.34} L${x - tw / 2},${ty + h * 0.34} Z `;
+    sd += `M${x},${ty} L${x + tw * 0.3},${ty + h * 0.2} Q${x},${ty + h * 0.15} ${x - tw * 0.3},${ty + h * 0.2} Z `;
   }
   return (
     <g>
       <rect x={x - h * 0.03} y={y - h * 0.14} width={h * 0.06} height={h * 0.14} fill={trunk} />
       <path d={d} fill={color} />
+      {snow && <path d={sd} fill={snow} />}
     </g>
   );
 };
 
 /** A band of conifers along a ridge line */
-export const Forest = ({seed, ridge, n, h, color, x0 = -200, x1 = W + 200, sink = 0.3}: {seed: number; ridge: Ridge; n: number; h: number; color: string; x0?: number; x1?: number; sink?: number}) => {
+export const Forest = ({seed, ridge, n, h, color, x0 = -200, x1 = W + 200, sink = 0.3, snow}: {seed: number; ridge: Ridge; n: number; h: number; color: string; x0?: number; x1?: number; sink?: number; snow?: string}) => {
   const r = rng(seed);
   const trees = Array.from({length: n}, () => {
     const x = x0 + r() * (x1 - x0);
@@ -153,19 +157,19 @@ export const Forest = ({seed, ridge, n, h, color, x0 = -200, x1 = W + 200, sink 
   return (
     <g>
       {trees.map((t, i) => (
-        <Spruce key={i} x={t.x} y={t.y} h={t.h} color={color} trunk={color} />
+        <Spruce key={i} x={t.x} y={t.y} h={t.h} color={color} trunk={color} snow={snow} />
       ))}
     </g>
   );
 };
 
 /** Round deciduous tree (orchard, cherry blossom, autumn larch-ish). */
-export const RoundTree = ({x, y, h, leaf, leaf2, trunk = '#5a3b26', dots, seed = 1}: {x: number; y: number; h: number; leaf: string; leaf2?: string; trunk?: string; dots?: string; seed?: number}) => {
+export const RoundTree = ({x, y, h, leaf, leaf2, trunk = '#5a3b26', dots, seed = 1, f = 0}: {x: number; y: number; h: number; leaf: string; leaf2?: string; trunk?: string; dots?: string; seed?: number; f?: number}) => {
   const r = rng(seed);
   const cr = h * 0.33;
   const blobs = Array.from({length: 7}, () => [(r() - 0.5) * cr * 1.4, (r() - 0.5) * cr * 0.9, cr * (0.5 + r() * 0.35)]);
   return (
-    <g>
+    <g transform={`rotate(${Math.sin(f / 45 + seed) * 1.1} ${x} ${y})`}>
       <path d={`M${x - h * 0.04},${y} L${x - h * 0.025},${y - h * 0.55} L${x + h * 0.025},${y - h * 0.55} L${x + h * 0.04},${y} Z`} fill={trunk} />
       {blobs.map(([bx, by, br], i) => (
         <circle key={i} cx={x + bx} cy={y - h * 0.62 + by} r={br} fill={i < 4 || !leaf2 ? leaf : leaf2} />
@@ -397,7 +401,7 @@ export const HoneyJar = ({x, y, s = 1, cloth = '#C8333A', fill = '#E39B1B'}: {x:
 export const Bee = ({x, y, s = 1, rot = 0, f = 0}: {x: number; y: number; s?: number; rot?: number; f?: number}) => {
   const left = Math.abs(((rot % 360) + 540) % 360 - 180) < 90;
   const tf = left ? `translate(${x},${y}) rotate(${rot - 180}) scale(${-s},${s})` : `translate(${x},${y}) rotate(${rot}) scale(${s})`;
-  const up = f % 2 === 0;
+  const up = Math.floor(f * SUB) % 2 === 0;
   return (
     <g transform={tf}>
       <ellipse cx={-1} cy={-10} rx={10} ry={5.5} fill="#fff" opacity={up ? 0.75 : 0.35} transform="rotate(-28 -1 -4)" />
@@ -474,7 +478,7 @@ export const Falling = ({seed, n, f, colors, size = 10, area = [0, -100, W, H + 
 export type Look = {skin?: string; top?: string; bottom?: string; hair?: string; hat?: string; dress?: boolean; veil?: string; beeVeil?: boolean; cane?: boolean; hunch?: number};
 const SIL = '#241C2B';
 /** Minimal storybook figure. Origin at the feet; h = height in px; unit space is 100 tall. */
-export const Person = ({x, y, h, look = {}, child = false, f = 0, walk = 0, flip = false, arm = 0, holding}: {x: number; y: number; h: number; look?: Look; child?: boolean; f?: number; walk?: number; flip?: boolean; arm?: number; holding?: React.ReactNode}) => {
+export const Person = ({x, y, h, look = {}, child = false, f = 0, walk = 0, flip = false, arm = 0, holding, shadow = true}: {x: number; y: number; h: number; look?: Look; child?: boolean; f?: number; walk?: number; flip?: boolean; arm?: number; holding?: React.ReactNode; shadow?: boolean}) => {
   const skin = look.skin ?? SIL;
   const top = look.top ?? SIL;
   const bottom = look.bottom ?? SIL;
@@ -484,8 +488,10 @@ export const Person = ({x, y, h, look = {}, child = false, f = 0, walk = 0, flip
   const shoulder = child ? -70 : -79;
   const hip = child ? -40 : -46;
   const sw = walk ? Math.sin((f / FPS) * Math.PI * 2 * 1.4) * 14 * walk : 0;
+  const blink = (Math.floor(f) + Math.floor(Math.abs(x) * 7)) % 110 < 3;
   return (
     <g transform={`translate(${x},${y}) scale(${(flip ? -1 : 1) * (h / 100)},${h / 100})`}>
+      {shadow && <ellipse cx={0} cy={0} rx={child ? 13 : 16} ry={3.2} fill="#000" opacity={0.16} />}
       <g transform={`rotate(${sw} 0 ${hip})`}>
         <rect x={-8.5} y={hip - 1} width={7} height={-hip + 1} rx={3} fill={bottom} />
       </g>
@@ -506,6 +512,13 @@ export const Person = ({x, y, h, look = {}, child = false, f = 0, walk = 0, flip
         {look.hair && <circle cx={-1.5} cy={head.cy - 1} r={head.r + 1.2} fill={hair} />}
         <circle cx={0.8} cy={head.cy + 0.5} r={head.r} fill={skin} />
         {look.hair && <path d={`M${-head.r - 0.5},${head.cy} a${head.r + 0.5},${head.r + 0.5} 0 0 1 ${head.r * 2 + 1},-2 q-${head.r},-${head.r * 0.4} -${head.r * 2 + 1},2 z`} fill={hair} />}
+        {skin !== SIL && (
+          <g fill="#2A1E1A">
+            <ellipse cx={head.r * 0.3} cy={head.cy + head.r * 0.08} rx={head.r * 0.11} ry={head.r * (blink ? 0.02 : 0.14)} />
+            <ellipse cx={head.r * 0.8} cy={head.cy + head.r * 0.08} rx={head.r * 0.1} ry={head.r * (blink ? 0.02 : 0.13)} />
+            <circle cx={head.r * 0.66} cy={head.cy + head.r * 0.48} r={head.r * 0.2} fill="#E8857A" opacity={0.35} />
+          </g>
+        )}
         {look.hat && (
           <>
             <ellipse cx={0.5} cy={head.cy - head.r * 0.55} rx={head.r * 1.9} ry={head.r * 0.32} fill={look.hat} />
@@ -549,3 +562,77 @@ export const hexGrid = (r: number) => {
   }
   return cells;
 };
+
+// ------------------------------------------------------------------ life: sky, wind, critters
+export const Clouds = ({seed, n, f, y0 = 70, y1 = 360, color = '#fff', shade = '#000', opacity = 0.85, speed = 0.25, scale = 1}: {seed: number; n: number; f: number; y0?: number; y1?: number; color?: string; shade?: string; opacity?: number; speed?: number; scale?: number}) => {
+  const r = rng(seed);
+  return (
+    <g>
+      {Array.from({length: n}, (_, i) => {
+        const w = (170 + r() * 230) * scale;
+        const y = y0 + r() * (y1 - y0);
+        const x = ((r() * (W + 900) + f * speed * (0.6 + r() * 0.8)) % (W + 900)) - 450;
+        const puffs = 4 + Math.floor(r() * 3);
+        const o = opacity * (0.65 + r() * 0.35);
+        return (
+          <g key={i} opacity={o}>
+            {Array.from({length: puffs}, (_, k) => {
+              const u = k / (puffs - 1);
+              const pr = w * (0.13 + r() * 0.1) * (1 - Math.abs(u - 0.5) * 0.9);
+              return <circle key={k} cx={x - w * 0.36 + u * w * 0.72} cy={y - pr * 0.45} r={pr} fill={color} />;
+            })}
+            <ellipse cx={x} cy={y} rx={w / 2} ry={w * 0.11} fill={color} />
+            <ellipse cx={x} cy={y + w * 0.05} rx={w * 0.44} ry={w * 0.05} fill={shade} opacity={0.08} />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
+export const Birds = ({seed, n, f, color = '#2b2b3a', y0 = 120, y1 = 360, speed = 1.6, size = 10}: {seed: number; n: number; f: number; color?: string; y0?: number; y1?: number; speed?: number; size?: number}) => {
+  const r = rng(seed);
+  return (
+    <g>
+      {Array.from({length: n}, (_, i) => {
+        const sx = r() * (W + 600);
+        const y = y0 + r() * (y1 - y0) + Math.sin(f / 30 + i) * 12;
+        const s = size * (0.6 + r() * 0.6);
+        const x = ((sx + f * speed * (0.7 + r() * 0.6)) % (W + 600)) - 300;
+        const flap = Math.sin(f * 0.45 * (0.8 + r() * 0.4) + i * 1.7);
+        return <path key={i} d={`M${x - s},${y - flap * s * 0.6} Q${x - s * 0.4},${y - s * 0.2} ${x},${y} Q${x + s * 0.4},${y - s * 0.2} ${x + s},${y - flap * s * 0.6}`} stroke={color} strokeWidth={s * 0.22} fill="none" strokeLinecap="round" />;
+      })}
+    </g>
+  );
+};
+
+/** Grass blades along the top of a ridge, swaying */
+export const Grass = ({seed, ridge, n, color, h = 16, f = 0, x0 = -150, x1 = W + 150}: {seed: number; ridge: Ridge; n: number; color: string; h?: number; f?: number; x0?: number; x1?: number}) => {
+  const r = rng(seed);
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const x = x0 + r() * (x1 - x0);
+    const y = ridge.yAt(x) + 3 + r() * 8;
+    const hh = h * (0.6 + r() * 0.8);
+    const sway = Math.sin(f / 22 + x / 70) * hh * 0.3;
+    d += `M${(x - 3).toFixed(1)},${y.toFixed(1)} Q${(x + sway * 0.4).toFixed(1)},${(y - hh * 0.6).toFixed(1)} ${(x + sway).toFixed(1)},${(y - hh).toFixed(1)} Q${(x + 1).toFixed(1)},${(y - hh * 0.5).toFixed(1)} ${(x + 3).toFixed(1)},${y.toFixed(1)} Z `;
+  }
+  return <path d={d} fill={color} />;
+};
+
+export const Butterflies = ({seed, n, f, cx, cy, rx, ry, colors = ['#F2C14E', '#FFFFFF', '#E07A5F']}: {seed: number; n: number; f: number; cx: number; cy: number; rx: number; ry: number; colors?: string[]}) => (
+  <g>
+    {Array.from({length: n}, (_, i) => {
+      const {pos} = beePath(seed * 31 + i, cx, cy, rx, ry);
+      const [x, y] = pos((f / FPS) * 0.6);
+      const k = Math.abs(Math.cos(f * 0.5 + i));
+      return (
+        <g key={i} transform={`translate(${x},${y})`}>
+          <ellipse cx={-6 * k} cy={-3} rx={7 * k + 1} ry={6} fill={colors[i % colors.length]} />
+          <ellipse cx={6 * k} cy={-3} rx={7 * k + 1} ry={6} fill={colors[i % colors.length]} />
+          <rect x={-1} y={-8} width={2} height={11} rx={1} fill="#2A1E14" />
+        </g>
+      );
+    })}
+  </g>
+);

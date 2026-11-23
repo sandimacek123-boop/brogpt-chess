@@ -1,8 +1,8 @@
-// The eleven chapters of Michael's life. Each scene gets its local frame f
+// The fifteen chapters of Michael's life. Each scene gets its local frame f
 // (f = 24 when it is fully on screen) and its duration, and returns SVG.
 import React from 'react';
 import {
-  Bee, BeeHouse, Church, CombFrame, Falling, Flowers, Forest, Glow, Grad, Hive, HoneyJar, House, Kozolec, Mist, Motes, Person, RoundTree,
+  Bee, BeeHouse, Birds, Butterflies, Church, Clouds, CombFrame, Falling, Grass, Flowers, Forest, Glow, Grad, Hive, HoneyJar, House, Kozolec, Mist, Motes, Person, RoundTree,
   SANS, SERIF, Sky, Spruce, Stars, Sun, Swarm, Triglav, W, H, clamp, easeOut, hexGrid, hexPoints, lerp, makeRidge, ramp, rng,
 } from './lib';
 
@@ -48,6 +48,7 @@ export const Title = ({f, dur}: SceneProps) => {
       <Sky id="t1s" stops={[[0, '#121834'], [0.42, '#3D3462'], [0.72, '#B56A80'], [1, '#F4B37A']]} />
       <Stars seed={5} n={160} opacity={1 - dawn * 0.9} f={f} maxY={520} />
       <Sun id="t1sun" x={1380} y={lerp(800, 610, dawn)} r={46} core="#FFE2B0" glow="#FFB070" />
+      <Birds seed={16} n={4} f={f} color="#2a2340" y0={470} y1={560} size={8} />
       <Par f={f} dur={dur} d={20}>
         <path d={t1.far.d} fill="#6E5D8C" />
       </Par>
@@ -94,6 +95,8 @@ export const Birth = ({f, dur}: SceneProps) => {
     <Cam f={f} dur={dur} z0={1} z1={1.13} ox={905} oy={640}>
       <Sky id="t2s" stops={[[0, '#86BCE3'], [0.55, '#CFE6F0'], [1, '#F8E7C6']]} />
       <Sun id="t2sun" x={1560} y={190} r={52} core="#FFF7DE" glow="#FFE6A6" />
+      <Clouds seed={27} n={6} f={f} y1={300} />
+      <Birds seed={28} n={5} f={f} y0={150} y1={320} color="#3a4a5a" />
       <Par f={f} dur={dur} d={16}>
         <path d={t2.far.d} fill="#A3B8CF" />
         <Triglav x={660} y={590} s={0.62} rock="#93A9C3" shade="#7A92B0" snow="#FFFFFF" snowShade="#DCE6F0" />
@@ -107,7 +110,7 @@ export const Birth = ({f, dur}: SceneProps) => {
         <path d={t2.hill.d} fill="#8DB463" />
         <Church x={1330} y={t2.hill.yAt(1330) + 18} s={0.78} />
         {[300, 780, 1010, 1520, 1680].map((x, i) => (
-          <RoundTree key={x} x={x} y={t2.hill.yAt(x) + 22} h={110 + (i % 2) * 30} leaf="#4F7F3E" leaf2="#5E9148" seed={i + 3} />
+          <RoundTree key={x} x={x} y={t2.hill.yAt(x) + 22} h={110 + (i % 2) * 30} leaf="#4F7F3E" leaf2="#5E9148" seed={i + 3} f={f} />
         ))}
         {houses.map((hs, i) => (
           <House key={hs.x} x={hs.x} y={t2.hill.yAt(hs.x) + 26} s={hs.s} f={f + i * 20} glow={hs.glow ? 0.5 + 0.5 * Math.sin(f / 9) : 0} seed={i} />
@@ -116,6 +119,7 @@ export const Birth = ({f, dur}: SceneProps) => {
       </Par>
       <Par f={f} dur={dur} d={100}>
         <path d={t2.near.d} fill="#6E9C49" />
+        <Grass seed={29} ridge={t2.near} n={420} color="#5E8C3E" f={f} />
         <Kozolec x={70} y={t2.near.yAt(200) + 30} s={0.9} />
         <Flowers seed={26} ridge={t2.near} n={160} colors={['#FFFFFF', '#F7D44C', '#C9A0DC', '#F28C8C']} size={4.5} />
       </Par>
@@ -129,6 +133,7 @@ export const Dedek = ({f, dur}: SceneProps) => (
   <Cam f={f} dur={dur} z0={1.02} z1={1.1} ox={980} oy={600}>
     <Sky id="t3s" stops={[[0, '#93C2DE'], [0.5, '#F2DDB2'], [1, '#F6C88A']]} />
     <Sun id="t3sun" x={1700} y={150} r={50} core="#FFF4D6" glow="#FFD98C" />
+    <Clouds seed={36} n={5} f={f} y1={280} color="#FFF8EA" />
     <Par f={f} dur={dur} d={14}>
       <path d={t3.far.d} fill="#AEB9C6" />
       <Mist id="t3m" y={540} h={90} color="#FFF3DD" opacity={0.6} f={f} />
@@ -136,17 +141,19 @@ export const Dedek = ({f, dur}: SceneProps) => (
     <Par f={f} dur={dur} d={30}>
       <path d={t3.hill.d} fill="#86A95B" />
       {[120, 330, 1420, 1600, 1810].map((x, i) => (
-        <RoundTree key={x} x={x} y={t3.hill.yAt(x) + 30} h={150 + (i % 3) * 25} leaf="#5B8A3F" leaf2="#6E9C4A" dots="#D9443A" seed={i + 11} />
+        <RoundTree key={x} x={x} y={t3.hill.yAt(x) + 30} h={150 + (i % 3) * 25} leaf="#5B8A3F" leaf2="#6E9C4A" dots="#D9443A" seed={i + 11} f={f} />
       ))}
     </Par>
     <Par f={f} dur={dur} d={60}>
       <path d={t3.ground.d} fill="#6E9B47" />
+      <Grass seed={38} ridge={t3.ground} n={420} color="#5E8A3C" f={f} />
       <Flowers seed={34} ridge={t3.ground} n={120} colors={['#FFFFFF', '#F7D44C', '#B48FD8']} size={4.5} />
       <BeeHouse x={720} y={805} s={1.15} seed={3} />
       <Person x={1170} y={815} h={250} look={{skin: '#E6C1A0', top: '#4E6E8E', bottom: '#3B3B45', hair: '#D9D9D9', hat: '#8A7350', hunch: 5}} flip arm={25} />
       <Person x={1060} y={820} h={150} child look={{skin: '#F0CBA5', top: '#C8553D', bottom: '#2E4A7A', hair: '#6B4A2B'}} flip arm={95 + Math.sin(f / 12) * 6} holding={<CombFrame f={f} />} />
       <Swarm seed={3} n={16} cx={720} cy={610} rx={340} ry={130} f={f} s={0.9} />
       <Swarm seed={4} n={5} cx={980} cy={630} rx={70} ry={50} f={f} s={0.75} speed={1.4} />
+      <Butterflies seed={37} n={3} f={f} cx={1450} cy={640} rx={260} ry={80} />
     </Par>
     <Rays id="t3r" x={1700} y={150} color="#FFF1C8" opacity={0.22} f={f} />
     <Motes seed={35} n={50} f={f} />
@@ -190,6 +197,8 @@ export const Bled = ({f, dur}: SceneProps) => {
     <Cam f={f} dur={dur} z0={1} z1={1.07} ox={800} oy={620}>
       <Sky id="t4s" stops={[[0, '#5AA6DC'], [0.6, '#BCDFF2'], [1, '#EAF4F2']]} />
       <Sun id="t4sun" x={1130} y={120} r={44} core="#FFFBEA" glow="#FFF0B8" />
+      <Clouds seed={45} n={6} f={f} y1={250} />
+      <Birds seed={46} n={4} f={f} y0={160} y1={300} color="#34445a" />
       <BledLand f={f} />
       <defs>
         <Grad id="t4w" stops={[[0, '#4C93B8'], [0.4, '#2F7AA3'], [1, '#1B5579']]} />
@@ -208,6 +217,14 @@ export const Bled = ({f, dur}: SceneProps) => {
         const off = (f * (0.6 + (i % 4) * 0.2) + i * 137) % 400;
         return <line key={i} x1={-200 + off} y1={y} x2={W + 200} y2={y} stroke="#fff" strokeOpacity={0.12 + (i % 3) * 0.05} strokeWidth={1 + i * 0.08} strokeDasharray={`${60 + i * 6} ${90 + i * 9}`} />;
       })}
+      {[0, 1].map((k) => (
+        <g key={k} transform={`translate(${lerp(1200, 1090, f / dur) + k * 64},${742 + k * 10 + Math.sin(f / 20 + k) * 2}) scale(${k ? -1 : 1},1)`}>
+          <path d="M-22,0 Q-24,-14 -6,-14 L14,-10 Q22,-8 20,0 Z" fill="#FFFFFF" />
+          <path d="M-14,-12 Q-22,-34 -12,-40 Q-6,-42 -6,-36" stroke="#FFFFFF" strokeWidth={5} fill="none" strokeLinecap="round" />
+          <path d="M-6,-37 l6,2" stroke="#E8823A" strokeWidth={3} strokeLinecap="round" />
+          <path d="M-28,4 q26,6 52,0" stroke="#fff" strokeOpacity={0.4} strokeWidth={2} fill="none" />
+        </g>
+      ))}
       {/* pletna boat */}
       <g transform={`translate(${bx},${790 + Math.sin(f / 14) * 3})`}>
         <path d="M-260,0 L-200,-40 L-160,-40" stroke="#fff" strokeOpacity={0.4} strokeWidth={3} fill="none" />
@@ -239,6 +256,8 @@ export const Wedding = ({f, dur}: SceneProps) => (
   <Cam f={f} dur={dur} z0={1.08} z1={1} ox={900} oy={600}>
     <Sky id="t5s" stops={[[0, '#9AC3E8'], [0.6, '#F5D2D0'], [1, '#FCE8D8']]} />
     <Sun id="t5sun" x={420} y={180} r={46} core="#FFF8EC" glow="#FFE0D0" />
+    <Clouds seed={56} n={5} f={f} y1={280} color="#FFF5F2" />
+    <Birds seed={57} n={5} f={f} y0={120} y1={300} color="#FFFFFF" size={13} speed={2} />
     <Par f={f} dur={dur} d={16}>
       <path d={t5.far.d} fill="#B7C4DA" />
     </Par>
@@ -246,7 +265,7 @@ export const Wedding = ({f, dur}: SceneProps) => (
       <path d={t5.hill.d} fill="#8DBA66" />
       <Church x={1150} y={t5.hill.yAt(1150) + 24} s={1.05} f={f} ring={1 - ramp(f, 150, 220)} />
       {[260, 620, 1640, 1820].map((x, i) => (
-        <RoundTree key={x} x={x} y={t5.hill.yAt(x) + 30} h={180 + (i % 2) * 40} leaf="#F2B3C0" leaf2="#F8CFD8" trunk="#6b4a3a" seed={i + 50} />
+        <RoundTree key={x} x={x} y={t5.hill.yAt(x) + 30} h={180 + (i % 2) * 40} leaf="#F2B3C0" leaf2="#F8CFD8" trunk="#6b4a3a" seed={i + 50} f={f} />
       ))}
       {[1060, 1290, 1330, 1380].map((x, i) => (
         <Person key={x} x={x} y={t5.hill.yAt(x) + 30} h={70} look={{skin: '#E6C1A0', top: ['#5B8DB8', '#9D6B9E', '#6A994E', '#E07A5F'][i], dress: i % 2 === 1, bottom: '#3b3b45', hair: '#4a3020'}} flip={i > 0} />
@@ -254,6 +273,7 @@ export const Wedding = ({f, dur}: SceneProps) => (
     </Par>
     <Par f={f} dur={dur} d={70}>
       <path d={t5.ground.d} fill="#76A653" />
+      <Grass seed={58} ridge={t5.ground} n={420} color="#64934A" f={f} />
       <Flowers seed={54} ridge={t5.ground} n={120} colors={['#FFFFFF', '#F7C4D0', '#F7D44C']} size={4.5} />
       <Person x={820} y={820} h={225} look={{skin: '#F0CBA5', top: '#FFFFFF', dress: true, veil: '#FFFFFF', hair: '#7A4A2A'}} arm={-25} />
       <Person x={900} y={820} h={240} look={{skin: '#E6C1A0', top: '#2B2F3A', bottom: '#2B2F3A', hair: '#5B3A22'}} flip arm={-25} />
@@ -302,6 +322,7 @@ export const OwnHives = ({f, dur}: SceneProps) => {
     <Cam f={f} dur={dur} z0={1} z1={1.05}>
       <Sky id="t6s" stops={[[0, '#7CAFD6'], [0.55, '#F4C98C'], [1, '#F1A35E']]} />
       <Sun id="t6sun" x={300} y={260} r={50} core="#FFF0C8" glow="#FFC77A" />
+      <Clouds seed={66} n={5} f={f} y1={280} color="#FFF1DC" />
       <Par f={f} dur={dur} d={14}>
         <path d={t6.far.d} fill="#A49EB4" />
       </Par>
@@ -311,6 +332,7 @@ export const OwnHives = ({f, dur}: SceneProps) => {
       </Par>
       <Par f={f} dur={dur} d={50}>
         <path d={t6.ground.d} fill="#6E9343" />
+        <Grass seed={67} ridge={t6.ground} n={420} color="#5D8237" f={f} />
         <Flowers seed={65} ridge={t6.ground} n={90} colors={['#FFFFFF', '#F7D44C', '#E8786A']} size={4.5} />
         <BeeHouse x={520} y={800} s={1.1} seed={7} rows={4} cols={5} />
         <Person x={880} y={805} h={235} look={{skin: '#E6C1A0', top: '#F4F1EA', bottom: '#3F4A6B', hair: '#5B3A22'}} flip arm={70 + Math.sin(f / 6) * 8} holding={<g><rect x={-1.2} y={-13} width={2.4} height={13} fill="#5a3b26" /><rect x={-1.8} y={-18} width={3.6} height={6} rx={1.5} fill="#C8333A" /></g>} />
@@ -321,6 +343,7 @@ export const OwnHives = ({f, dur}: SceneProps) => {
           <HoneyJar key={i} x={1060 + i * 52} y={765} s={0.8} cloth={i % 2 ? '#C8333A' : '#2E6AB0'} />
         ))}
         <Swarm seed={6} n={14} cx={520} cy={530} rx={300} ry={160} f={f} s={0.85} />
+        <Butterflies seed={68} n={3} f={f} cx={1150} cy={640} rx={200} ry={70} />
       </Par>
       <g transform={`translate(${lerp(560, 0, slide)},0) rotate(-3 1560 380)`} opacity={slide}>
         <rect x={1260} y={160} width={610} height={440} fill="#000" opacity={0.18} transform="translate(12,16)" />
@@ -452,6 +475,8 @@ export const Grandkids = ({f, dur}: SceneProps) => (
   <Cam f={f} dur={dur} z0={1} z1={1.08} ox={900} oy={620}>
     <Sky id="t8s" stops={[[0, '#64AEE3'], [0.6, '#BEE2F5'], [1, '#EEF6E2']]} />
     <Sun id="t8sun" x={1650} y={170} r={50} core="#FFFBEA" glow="#FFF0B8" />
+    <Clouds seed={87} n={6} f={f} y1={300} />
+    <Birds seed={88} n={4} f={f} y0={140} y1={300} color="#34445a" />
     <Par f={f} dur={dur} d={14}>
       <path d={t8.far.d} fill="#9EB6CF" />
       <Triglav x={1380} y={560} s={0.55} rock="#93A9C3" shade="#7A92B0" snow="#FFFFFF" snowShade="#DCE6F0" />
@@ -463,6 +488,7 @@ export const Grandkids = ({f, dur}: SceneProps) => (
     </Par>
     <Par f={f} dur={dur} d={60}>
       <path d={t8.ground.d} fill="#6FA046" />
+      <Grass seed={89} ridge={t8.ground} n={420} color="#5E8E3A" f={f} />
       <Flowers seed={85} ridge={t8.ground} n={260} colors={['#FFFFFF', '#F7D44C', '#F7D44C', '#E03B3B', '#B48FD8']} size={5} />
       {[340, 520, 700].map((x, i) => (
         <Hive key={x} x={x} y={795} s={1.1} seed={i * 3 + 20} />
@@ -472,6 +498,7 @@ export const Grandkids = ({f, dur}: SceneProps) => (
       <Person x={1290} y={812} h={124} child look={{skin: '#F0CBA5', top: '#E07A5F', dress: true, hair: '#C08A4A'}} flip arm={30} />
       <Swarm seed={8} n={14} cx={540} cy={650} rx={280} ry={90} f={f} s={0.85} />
       <Swarm seed={9} n={4} cx={1050} cy={650} rx={90} ry={50} f={f} s={0.75} />
+      <Butterflies seed={90} n={4} f={f} cx={820} cy={700} rx={420} ry={70} />
     </Par>
     <Motes seed={86} n={30} f={f} />
   </Cam>
@@ -563,6 +590,7 @@ export const Autumn = ({f, dur}: SceneProps) => {
     <Cam f={f} dur={dur} z0={1} z1={1.1} ox={930} oy={700}>
       <Sky id="t10s" stops={[[0, '#2E2A5A'], [0.45, '#AE4F78'], [0.75, '#F08A4B'], [1, '#FFC56E']]} />
       <Sun id="t10sun" x={1400} y={sunY} r={60} core="#FFE3A0" glow="#FF9E5A" />
+      <Birds seed={108} n={9} f={f} color="#2A1630" y0={170} y1={300} speed={1.2} size={11} />
       <Par f={f} dur={dur} d={14}>
         <path d={t10.far.d} fill="#6B3B66" />
         <Mist id="t10m" y={650} h={110} color="#FFB08A" opacity={0.35} f={f} />
@@ -574,6 +602,7 @@ export const Autumn = ({f, dur}: SceneProps) => {
       </Par>
       <Par f={f} dur={dur} d={50}>
         <path d={t10.ground.d} fill="#2B1C30" />
+        <Grass seed={109} ridge={t10.ground} n={360} color="#24172A" f={f} />
         <BeeHouse x={470} y={820} s={0.95} seed={7} rows={4} cols={5} wood="#5A3A2A" dark="#2A1A12" roof="#2E1E18" shade={0.4} />
         <Spruce x={1700} y={830} h={300} color="#E3A33B" trunk="#5a3b26" />
         <Spruce x={1820} y={840} h={360} color="#C9792F" trunk="#5a3b26" />
@@ -588,7 +617,7 @@ export const Autumn = ({f, dur}: SceneProps) => {
             <rect x={30} y={-70} width={10} height={70} rx={4} fill="#3A3046" />
             <rect x={16} y={-70} width={10} height={70} rx={4} fill="#3A3046" />
           </g>
-          <Person x={bench.x - 14} y={bench.y + 30} h={200} look={{skin: '#C99A7A', top: '#6A4F5E', bottom: 'transparent', hair: '#E6E6E6', hat: '#4A3A30', hunch: 12}} arm={30} />
+          <Person x={bench.x - 14} y={bench.y + 30} h={200} shadow={false} look={{skin: '#C99A7A', top: '#6A4F5E', bottom: 'transparent', hair: '#E6E6E6', hat: '#4A3A30', hunch: 12}} arm={30} />
           <line x1={bench.x + 30} y1={bench.y - 80} x2={bench.x + 52} y2={bench.y} stroke="#5a3b26" strokeWidth={5} strokeLinecap="round" />
         </g>
         {land > 0 && <Bee x={lerp(bench.x + 300, bench.x + 20, easeOut(land))} y={lerp(bench.y - 260, bench.y - 76, easeOut(land)) + Math.sin(f / 4) * 6 * (1 - land)} s={1.1} rot={land < 1 ? 200 : 180} f={land < 1 ? f : 0} />}
@@ -639,3 +668,353 @@ export const Outro = ({f, dur}: SceneProps) => (
   </Cam>
 );
 
+
+// ================================================================== new: Planica 1960
+const tP = {far: makeRidge(131, 430, 170, 0.85, 0.7), mid: makeRidge(132, 590, 80, 0.35, 1.2)};
+const Jumper = ({x, y, rot, v}: {x: number; y: number; rot: number; v: number}) => (
+  <g transform={`translate(${x},${y}) rotate(${rot}) scale(1.25)`}>
+    <line x1={10} y1={0} x2={-34} y2={-v * 7} stroke="#2a2a33" strokeWidth={3} strokeLinecap="round" />
+    <line x1={10} y1={0} x2={-34} y2={v * 7} stroke="#4a4a55" strokeWidth={3} strokeLinecap="round" />
+    <path d="M2,-2 L-14,-14" stroke="#C8333A" strokeWidth={7} strokeLinecap="round" />
+    <circle cx={-18} cy={-17} r={5} fill="#F4F4F4" />
+  </g>
+);
+const jumperAt = (f: number): [number, number, number] => {
+  if (f < 30) return [1800, 162, 0];
+  if (f < 72) {
+    const u = ((f - 30) / 42) ** 2;
+    return [lerp(1800, 1460, u), lerp(162, 405, u), 0];
+  }
+  if (f < 150) {
+    const u = (f - 72) / 78;
+    return [lerp(1460, 1050, u), lerp(405, 678, u) - 80 * Math.sin(Math.PI * u), Math.sin(Math.PI * Math.min(1, u * 1.3))];
+  }
+  const v = easeOut((f - 150) / 90);
+  return [lerp(1050, 640, v), 678 + 90 * Math.pow(v, 0.45), 0];
+};
+export const Planica = ({f, dur}: SceneProps) => {
+  const [jx, jy, jv] = jumperAt(f);
+  const [nx, ny] = jumperAt(f + 1);
+  const rot = (Math.atan2(ny - jy, nx - jx) * 180) / Math.PI - 180;
+  const cheer = ramp(f, 150, 162);
+  const r = rng(133);
+  const crowd = Array.from({length: 96}, (_, i) => ({x: 390 + i * 6.4 + r() * 5, y: 792 + (i % 4) * 7 + r() * 4, c: ['#C8333A', '#2E6AB0', '#F2C14E', '#3F7A44', '#E07A5F', '#5A4A6A'][Math.floor(r() * 6)], up: r() < 0.4, ph: r() * 6}));
+  return (
+    <Cam f={f} dur={dur} z0={1.02} z1={1.09} ox={1100} oy={560}>
+      <Sky id="tPs" stops={[[0, '#86AFD4'], [0.6, '#D3E3EF'], [1, '#F2F6FA']]} />
+      <Clouds seed={134} n={6} f={f} y1={260} color="#F4F7FA" opacity={0.9} />
+      <Par f={f} dur={dur} d={14}>
+        <path d={tP.far.d} fill="#DCE6F1" />
+      </Par>
+      <Par f={f} dur={dur} d={26}>
+        <path d={tP.mid.d} fill="#9FB3C9" />
+        <Forest seed={135} ridge={tP.mid} n={140} h={70} color="#2F4A3E" snow="#F4F7FA" />
+      </Par>
+      {/* in-run on its steel trestle */}
+      {Array.from({length: 9}, (_, i) => {
+        const u = i / 8;
+        const x = lerp(1830, 1470, u);
+        const y = lerp(150, 400, u);
+        return <line key={i} x1={x} y1={y} x2={x} y2={Math.max(y + 30, 640)} stroke="#5A6470" strokeWidth={5} />;
+      })}
+      <line x1={1840} y1={142} x2={1455} y2={410} stroke="#5A6470" strokeWidth={20} strokeLinecap="round" />
+      <line x1={1840} y1={134} x2={1455} y2={402} stroke="#F2F6FA" strokeWidth={8} strokeLinecap="round" />
+      <rect x={1800} y={92} width={60} height={50} fill="#7A4E2D" />
+      <polygon points="1792,94 1868,94 1830,64" fill="#4a3426" />
+      <defs>
+        <Grad id="tPhill" stops={[[0, '#E6EEF6'], [1, '#FFFFFF']]} x2={-0.4} y2={1} />
+      </defs>
+      <path d="M1470,430 C1320,470 1190,610 1030,690 C920,750 790,765 560,770 L-300,772 L-300,1400 L2300,1400 L2300,430 Z" fill="url(#tPhill)" />
+      <path d="M1205,600 l40,-28 M1000,706 l30,-20" stroke="#C8333A" strokeWidth={4} opacity={0.7} />
+      <path d="M1470,430 C1320,470 1190,610 1030,690 C920,750 790,765 560,770" stroke="#C9D6E4" strokeWidth={4} fill="none" />
+      <Forest seed={136} ridge={{d: '', yAt: (x) => 470 + (x - 1500) * 0.15}} n={40} h={80} color="#2F4A3E" snow="#F4F7FA" x0={1520} x1={2000} sink={0.6} />
+      {crowd.map((p, i) => {
+        const hop = Math.abs(Math.sin(f / 4 + p.ph)) * 5 * cheer;
+        return (
+          <g key={i} transform={`translate(${p.x},${p.y - hop})`}>
+            <rect x={-3.5} y={-12} width={7} height={12} rx={2} fill={p.c} />
+            <circle cx={0} cy={-15} r={3.6} fill="#E6C1A0" />
+            {p.up && cheer > 0 && <line x1={2} y1={-10} x2={5} y2={-22} stroke={p.c} strokeWidth={2.4} strokeLinecap="round" />}
+          </g>
+        );
+      })}
+      <rect x={370} y={812} width={640} height={10} fill="#fff" />
+      {Array.from({length: 16}, (_, i) => (
+        <rect key={i} x={370 + i * 40} y={812} width={20} height={10} fill={i % 2 ? '#2E6AB0' : '#C8333A'} />
+      ))}
+      <Jumper x={jx} y={jy} rot={rot} v={jv} />
+      <path d="M-300,740 Q120,720 360,790 Q420,812 430,1400 L-300,1400 Z" fill="#FFFFFF" />
+      <path d="M-300,740 Q120,720 360,790 Q420,812 430,1400" stroke="#DCE6F0" strokeWidth={4} fill="none" />
+      <Person x={130} y={790} h={228} f={f} look={{skin: '#E6C1A0', top: '#5A4A3A', bottom: '#2B2F3A', hat: '#3a2a20'}} arm={10 + cheer * 25} />
+      <Person x={225} y={800} h={176} f={f} look={{skin: '#F0CBA5', top: '#2E6AB0', bottom: '#2B2F3A', hair: '#C8333A'}} arm={20 + cheer * (140 + Math.sin(f / 5) * 12)} />
+      <Falling seed={137} n={140} f={f} colors={['#FFFFFF']} size={3.2} speed={0.55} />
+    </Cam>
+  );
+};
+
+// ================================================================== new: Ana and the lipa 1973
+const tD = {far: makeRidge(141, 520, 120, 0.75, 0.75), mid: makeRidge(142, 650, 45, 0.15, 1.6), ground: makeRidge(143, 790, 16, 0, 3, 3)};
+export const Daughter = ({f, dur}: SceneProps) => {
+  const grow = easeOut((f - 40) / 120);
+  return (
+    <Cam f={f} dur={dur} z0={1} z1={1.07} ox={900} oy={620}>
+      <Sky id="tDs" stops={[[0, '#6FB0E0'], [0.6, '#C4E3F4'], [1, '#F2F5E4']]} />
+      <Sun id="tDsun" x={1500} y={160} r={48} core="#FFFBEA" glow="#FFF0B8" />
+      <Clouds seed={144} n={6} f={f} y1={300} />
+      <Birds seed={145} n={5} f={f} color="#34445a" />
+      <Par f={f} dur={dur} d={14}>
+        <path d={tD.far.d} fill="#A4B9D0" />
+        <Triglav x={1320} y={570} s={0.5} rock="#93A9C3" shade="#7A92B0" snow="#FFFFFF" snowShade="#DCE6F0" />
+      </Par>
+      <Par f={f} dur={dur} d={30}>
+        <path d={tD.mid.d} fill="#7FAE5A" />
+        <Forest seed={146} ridge={tD.mid} n={50} h={60} color="#4A7A40" x0={1150} />
+        {[150, 1780].map((x, i) => (
+          <RoundTree key={x} x={x} y={tD.mid.yAt(x) + 30} h={170} leaf="#5B8A3F" leaf2="#6E9C4A" seed={i + 147} f={f} />
+        ))}
+      </Par>
+      <Par f={f} dur={dur} d={55}>
+        <path d={tD.ground.d} fill="#73A34B" />
+        <Grass seed={148} ridge={tD.ground} n={420} color="#5F8F3E" f={f} />
+        <Flowers seed={149} ridge={tD.ground} n={140} colors={['#FFFFFF', '#F7D44C', '#F28C8C', '#B48FD8']} size={4.5} />
+        {Array.from({length: 38}, (_, i) => (
+          <path key={i} d={`M${640 + i * 26},${796} v-40 l6,-7 l6,7 v40 z`} fill="#F1E9DA" />
+        ))}
+        <rect x={636} y={766} width={990} height={6} fill="#E2D6C0" />
+        <rect x={636} y={784} width={990} height={6} fill="#E2D6C0" />
+        <House x={400} y={805} s={1.55} f={f} />
+        <ellipse cx={1000} cy={804} rx={48} ry={10} fill="#6B4A2F" />
+        <g transform={`translate(1000,800) scale(${0.25 + grow * 0.75})`}>
+          <rect x={-3} y={-110} width={6} height={110} fill="#6b4526" />
+          {[[-22, -118, 24], [20, -124, 24], [0, -146, 28], [-8, -102, 18], [12, -98, 17]].map(([cx, cy, rr], i) => (
+            <circle key={i} cx={cx + Math.sin(f / 30 + i) * 1.5} cy={cy} r={rr} fill={i % 2 ? '#6AAE4A' : '#7CC05A'} />
+          ))}
+        </g>
+        <Person x={820} y={805} h={212} f={f} look={{skin: '#F0CBA5', top: '#9D6B9E', dress: true, hair: '#7A4A2A'}} arm={62 + Math.sin(f / 18) * 4} holding={<g><ellipse cx={-6} cy={-4} rx={11} ry={7} fill="#F7EEDC" /><circle cx={-15} cy={-7} r={4.6} fill="#F0CBA5" /></g>} />
+        <Person x={1115} y={805} h={235} f={f} flip look={{skin: '#E6C1A0', top: '#F4F1EA', bottom: '#3F4A6B', hair: '#5B3A22'}} arm={30 + Math.sin(f / 9) * 10} holding={<g><rect x={-1.5} y={-22} width={3} height={62} fill="#6b4526" /><path d="M-7,40 h14 v10 q-7,7 -14,0 z" fill="#9aa0a6" /></g>} />
+        <Butterflies seed={150} n={4} f={f} cx={1250} cy={700} rx={300} ry={70} />
+      </Par>
+      <Motes seed={151} n={25} f={f} />
+    </Cam>
+  );
+};
+
+// ================================================================== new: Ljubljana market 1985
+const Stall = ({x, stripe, children}: {x: number; stripe: string; children?: React.ReactNode}) => (
+  <g>
+    <rect x={x - 150} y={560} width={8} height={240} fill="#5a3b26" />
+    <rect x={x + 142} y={560} width={8} height={240} fill="#5a3b26" />
+    {children}
+    <rect x={x - 160} y={728} width={320} height={10} fill="#8a5a33" />
+    <rect x={x - 156} y={738} width={312} height={52} fill="#F4EEE2" />
+    <rect x={x - 156} y={738} width={312} height={6} fill="#000" opacity={0.08} />
+    {Array.from({length: 8}, (_, i) => (
+      <polygon key={i} points={`${x - 170 + i * 42.5},540 ${x - 170 + (i + 1) * 42.5},540 ${x - 166 + (i + 1) * 41.5},580 ${x - 166 + i * 41.5},580`} fill={i % 2 ? '#FFFFFF' : stripe} />
+    ))}
+    {Array.from({length: 8}, (_, i) => (
+      <path key={`v${i}`} d={`M${x - 166 + i * 41.5},580 q20.75,14 41.5,0 z`} fill={i % 2 ? '#FFFFFF' : stripe} />
+    ))}
+  </g>
+);
+const Facade = ({x, w, h, color, seed}: {x: number; w: number; h: number; color: string; seed: number}) => {
+  const cols = Math.max(2, Math.floor(w / 42));
+  return (
+    <g>
+      <rect x={x} y={700 - h} width={w} height={h} fill={color} />
+      <polygon points={`${x - 6},${700 - h} ${x + w + 6},${700 - h} ${x + w - 10},${670 - h} ${x + 10},${670 - h}`} fill="#B5553F" />
+      {Array.from({length: 3}, (_, r) =>
+        Array.from({length: cols}, (_, c) => (
+          <rect key={`${r}-${c}`} x={x + (w / cols) * (c + 0.5) - 8} y={700 - h + 26 + r * 56} width={16} height={28} fill="#4A5568" stroke="#fff" strokeWidth={2} opacity={(seed + r + c) % 7 === 0 ? 0.6 : 1} />
+        )),
+      )}
+      <path d={`M${x + w / 2 - 14},700 v-26 a14,14 0 0 1 28,0 v26 z`} fill="#5A3B26" opacity={0.8} />
+    </g>
+  );
+};
+export const Market = ({f, dur}: SceneProps) => {
+  const walkers = [
+    {x0: -100, sp: 1.6, y: 868, h: 200, look: {skin: '#E6C1A0', top: '#2E6AB0', bottom: '#3B3B45', hair: '#3a2a1e'}},
+    {x0: 900, sp: 1.25, y: 880, h: 190, look: {skin: '#F0CBA5', top: '#E07A5F', dress: true, hair: '#C08A4A'}},
+    {x0: 1500, sp: -1.4, y: 862, h: 205, look: {skin: '#E0B890', top: '#6A994E', bottom: '#2B2F3A', hair: '#2a1a12', hat: '#4a3a30'}},
+    {x0: 400, sp: -1.1, y: 876, h: 140, child: true, look: {skin: '#F0CBA5', top: '#F2C14E', bottom: '#3F6EA8', hair: '#8A5A2B'}},
+  ];
+  return (
+    <Cam f={f} dur={dur} z0={1} z1={1.06} ox={760} oy={640}>
+      <Sky id="tMs" stops={[[0, '#7DB4DE'], [0.6, '#CFE5F1'], [1, '#F3EEE2']]} />
+      <Clouds seed={152} n={6} f={f} y1={260} />
+      <Birds seed={153} n={6} f={f} color="#5a5a66" y0={180} y1={330} />
+      <Par f={f} dur={dur} d={14}>
+        <path d="M-200,660 C100,600 330,330 620,322 C900,316 1100,520 1400,660 Z" fill="#5E8E4E" />
+        {Array.from({length: 18}, (_, i) => {
+          const x = 120 + i * 62;
+          const y = 640 - Math.max(0, 300 - Math.abs(x - 620) * 0.62) + 40;
+          return <circle key={i} cx={x} cy={y} r={34} fill={i % 2 ? '#4E7E40' : '#588A48'} />;
+        })}
+        <g transform="translate(620,326)">
+          <rect x={-160} y={-58} width={320} height={58} fill="#E9E1CF" />
+          {Array.from({length: 15}, (_, i) => (
+            <rect key={i} x={-160 + i * 22} y={-68} width={13} height={10} fill="#E9E1CF" />
+          ))}
+          <rect x={-46} y={-150} width={64} height={150} fill="#E3DACA" />
+          {Array.from({length: 4}, (_, i) => (
+            <rect key={`b${i}`} x={-46 + i * 18} y={-160} width={10} height={10} fill="#E3DACA" />
+          ))}
+          <rect x={-30} y={-120} width={10} height={18} fill="#5A6070" />
+          <rect x={-4} y={-120} width={10} height={18} fill="#5A6070" />
+          <line x1={-14} y1={-160} x2={-14} y2={-205} stroke="#666" strokeWidth={2.5} />
+          <g transform={`translate(-14,-205) skewY(${Math.sin(f / 10) * 4})`}>
+            <rect x={0} y={0} width={30} height={6} fill="#fff" />
+            <rect x={0} y={6} width={30} height={6} fill="#0B4EA2" />
+            <rect x={0} y={12} width={30} height={6} fill="#E21E26" />
+          </g>
+          {[-130, -100, 60, 90, 120].map((wx) => (
+            <rect key={wx} x={wx} y={-40} width={10} height={16} fill="#5A6070" />
+          ))}
+        </g>
+      </Par>
+      <Par f={f} dur={dur} d={26}>
+        {[[-80, 150, 230, '#F2D58A'], [70, 140, 260, '#EBB7A8'], [210, 150, 240, '#F3E7CF'], [360, 130, 270, '#BFD8C2'], [490, 160, 230, '#E8C27A'], [650, 140, 260, '#F3E7CF'], [790, 150, 240, '#EBB7A8'], [940, 150, 250, '#F2D58A'], [1460, 150, 250, '#BFD8C2'], [1610, 140, 230, '#F3E7CF'], [1750, 160, 260, '#EBB7A8'], [1910, 150, 240, '#F2D58A']].map(([x, w, h, c], i) => (
+          <Facade key={i} x={x as number} w={w as number} h={h as number} color={c as string} seed={i} />
+        ))}
+        <rect x={1410} y={320} width={44} height={380} fill="#C9685C" />
+        <path d="M1406,322 Q1432,262 1458,322 Z" fill="#3F6B5A" />
+        <rect x={1150} y={400} width={260} height={300} fill="#D97C6F" />
+        <path d="M1150,402 L1150,380 Q1200,380 1215,350 L1280,300 L1345,350 Q1360,380 1410,380 L1410,402 Z" fill="#D97C6F" />
+        <path d="M1150,380 Q1200,380 1215,350 L1280,300 L1345,350 Q1360,380 1410,380" stroke="#F4EEE2" strokeWidth={6} fill="none" />
+        <circle cx={1280} cy={292} r={8} fill="#F4EEE2" />
+        {[1165, 1225, 1323, 1383].map((px) => (
+          <rect key={px} x={px} y={410} width={12} height={290} fill="#F4EEE2" />
+        ))}
+        <circle cx={1280} cy={455} r={22} fill="#F4EEE2" />
+        <circle cx={1280} cy={455} r={15} fill="#4A5568" />
+        <path d="M1258,700 v-80 a22,22 0 0 1 44,0 v80 z" fill="#5A3B26" />
+        <rect x={-200} y={700} width={W + 400} height={50} fill="#4F8F8A" />
+        {Array.from({length: 8}, (_, i) => (
+          <line key={i} x1={((f * (0.8 + i * 0.1) + i * 260) % 2300) - 200} y1={708 + i * 5} x2={((f * (0.8 + i * 0.1) + i * 260) % 2300) - 80} y2={708 + i * 5} stroke="#fff" strokeOpacity={0.3} strokeWidth={2} />
+        ))}
+        <rect x={1060} y={686} width={460} height={16} fill="#F1ECE2" />
+        {Array.from({length: 46}, (_, i) => (
+          <rect key={i} x={1062 + i * 10} y={672} width={4} height={14} fill="#F1ECE2" />
+        ))}
+        <rect x={1060} y={668} width={460} height={5} fill="#F1ECE2" />
+        {[1130, 1290, 1450].map((ax) => (
+          <path key={ax} d={`M${ax - 60},750 v-34 a60,30 0 0 1 120,0 v34 z`} fill="#3B6E6A" />
+        ))}
+        <rect x={-200} y={748} width={W + 400} height={14} fill="#BDB3A2" />
+      </Par>
+      <rect x={-200} y={762} width={W + 400} height={500} fill="#CFC5B4" />
+      {Array.from({length: 160}, (_, i) => {
+        const r = rng(1600 + i);
+        return <ellipse key={i} cx={r() * W} cy={770 + r() * 320} rx={10 + r() * 8} ry={4 + r() * 2} fill={r() < 0.5 ? '#B9AE9B' : '#DED5C6'} opacity={0.6} />;
+      })}
+      <Stall x={260} stripe="#3F7A44">
+        <Person x={260} y={795} h={200} f={f} shadow={false} look={{skin: '#E0B890', top: '#7A5A8A', dress: true, hair: '#4a3020'}} />
+        {Array.from({length: 9}, (_, i) => (
+          <circle key={i} cx={150 + i * 26} cy={720 + (i % 2) * 4} r={11} fill={['#C62F2F', '#6AAE4A', '#F2A33B'][i % 3]} />
+        ))}
+      </Stall>
+      <Stall x={760} stripe="#C8333A">
+        <Person x={760} y={795} h={205} f={f} shadow={false} look={{skin: '#E6C1A0', top: '#F4F1EA', bottom: '#3F4A6B', hair: '#5B3A22'}} arm={35 + Math.sin(f / 10) * 8} />
+        {[0, 1, 2, 3, 4].map((i) => (
+          <HoneyJar key={i} x={652 + i * 54} y={728} s={0.68} cloth={i % 2 ? '#C8333A' : '#2E6AB0'} />
+        ))}
+      </Stall>
+      <Stall x={1500} stripe="#2E6AB0">
+        <Person x={1500} y={795} h={200} f={f} shadow={false} look={{skin: '#F0CBA5', top: '#E8C27A', bottom: '#3B3B45', hair: '#B0B0B0'}} />
+        {Array.from({length: 10}, (_, i) => (
+          <g key={i}>
+            <rect x={1388 + i * 24} y={700} width={3} height={28} fill="#3F7A44" />
+            <circle cx={1389 + i * 24} cy={698} r={10} fill={['#F28C8C', '#F7D44C', '#FFFFFF', '#B48FD8', '#E8534A'][i % 5]} />
+          </g>
+        ))}
+      </Stall>
+      <g transform="translate(560,640)">
+        <rect x={-3} y={0} width={6} height={150} fill="#5a3b26" />
+        <rect x={-58} y={-46} width={116} height={56} rx={6} fill="#7A4E2D" stroke="#4c3020" strokeWidth={4} />
+        <text x={-6} y={-6} textAnchor="middle" fontFamily={SERIF} fontWeight={700} fontSize={36} fill="#F2C14E">
+          MED
+        </text>
+        <Bee x={40} y={-18} s={0.75} rot={-10} f={f} />
+      </g>
+      <Person x={925} y={815} h={205} f={f} flip look={{skin: '#F0CBA5', top: '#5B8DB8', dress: true, hair: '#8A5A2B'}} arm={25} holding={<path d="M-12,0 h24 l-3,14 h-18 z" fill="#B88A4A" />} />
+      {[0, 1, 2, 3, 4].map((i) => {
+        const peck = Math.max(0, Math.sin(f / 7 + i * 2)) * 5;
+        const px = 1060 + i * 46 + Math.sin(f / 40 + i) * 10;
+        return (
+          <g key={i} transform={`translate(${px},${828 + (i % 2) * 10})`}>
+            <ellipse cx={0} cy={-8} rx={11} ry={7} fill="#8A8F9C" />
+            <circle cx={9} cy={-15 + peck} r={4.5} fill="#6E7380" />
+            <path d={`M13,${-15 + peck} l4,1`} stroke="#E8A24A" strokeWidth={2} />
+          </g>
+        );
+      })}
+      {walkers.map((w, i) => {
+        const x = ((((w.x0 + f * w.sp) % 2300) + 2300) % 2300) - 200;
+        return <Person key={i} x={x} y={w.y} h={w.h} f={f + i * 7} walk={1} flip={w.sp < 0} child={w.child} look={w.look} />;
+      })}
+    </Cam>
+  );
+};
+
+// ================================================================== new: golden anniversary 2020
+const tA = {far: makeRidge(161, 540, 110, 0.7, 0.8), mid: makeRidge(162, 660, 40, 0.1, 1.8), ground: makeRidge(163, 800, 14, 0, 3, 3)};
+export const Anniversary = ({f, dur}: SceneProps) => {
+  const toast = ramp(f, 110, 140);
+  const glass = <g><path d="M-4,-16 L4,-16 L2,-7 L-2,-7 Z" fill="#F7E3A5" opacity={0.9} /><rect x={-0.6} y={-7} width={1.2} height={7} fill="#eee" /></g>;
+  const bulbs = Array.from({length: 15}, (_, i) => {
+    const u = i / 14;
+    return {x: (1 - u) ** 2 * 740 + 2 * u * (1 - u) * 1100 + u * u * 1440, y: (1 - u) ** 2 * 360 + 2 * u * (1 - u) * 600 + u * u * 610};
+  });
+  const fam = [
+    {x: 700, h: 210, look: {skin: '#F0CBA5', top: '#3F6EA8', dress: true, hair: '#7A4A2A'}, flip: false},
+    {x: 775, h: 226, look: {skin: '#E6C1A0', top: '#6A994E', bottom: '#2B2F3A', hair: '#3a2a1e'}, flip: false},
+    {x: 900, h: 224, look: {skin: '#E6C1A0', top: '#F4F1EA', bottom: '#3F4A6B', hair: '#E0E0E0', hunch: 4}, flip: false},
+    {x: 978, h: 204, look: {skin: '#F0CBA5', top: '#B23A48', dress: true, hair: '#E6E6E6'}, flip: true},
+    {x: 1095, h: 216, look: {skin: '#F0CBA5', top: '#F2C14E', bottom: '#2B2F3A', hair: '#8A5A2B'}, flip: true},
+    {x: 1170, h: 200, look: {skin: '#F0CBA5', top: '#E07A5F', dress: true, hair: '#C08A4A'}, flip: true},
+  ];
+  return (
+    <Cam f={f} dur={dur} z0={1.06} z1={1} ox={940} oy={640}>
+      <Sky id="tAs" stops={[[0, '#5B78B0'], [0.5, '#E8A57E'], [1, '#F7D49C']]} />
+      <Sun id="tAsun" x={260} y={480} r={56} core="#FFE7B0" glow="#FFB878" />
+      <Clouds seed={164} n={5} f={f} y1={260} color="#F9D9C0" opacity={0.75} />
+      <Par f={f} dur={dur} d={14}>
+        <path d={tA.far.d} fill="#9C8FB0" />
+      </Par>
+      <Par f={f} dur={dur} d={30}>
+        <path d={tA.mid.d} fill="#6F9A55" />
+        <Forest seed={165} ridge={tA.mid} n={60} h={60} color="#4D7340" x0={1200} />
+      </Par>
+      <Par f={f} dur={dur} d={50}>
+        <path d={tA.ground.d} fill="#6E9A48" />
+        <Grass seed={166} ridge={tA.ground} n={400} color="#5C8A3C" f={f} />
+        <Flowers seed={167} ridge={tA.ground} n={90} colors={['#FFFFFF', '#F7D44C', '#F28C8C']} size={4.5} />
+        <House x={1560} y={810} s={1.5} f={f} />
+        <RoundTree x={520} y={815} h={790} leaf="#5C8E3E" leaf2="#6FA24B" seed={168} f={f} />
+        <path d={`M740,360 Q1100,600 1440,610`} stroke="#3a2a20" strokeWidth={2} fill="none" />
+        {bulbs.map((b, i) => (
+          <g key={i}>
+            <circle cx={b.x} cy={b.y + 8} r={17} fill="#FFD27A" opacity={0.28 + 0.08 * Math.sin(f / 6 + i)} />
+            <circle cx={b.x} cy={b.y + 8} r={6} fill="#FFF0C4" />
+          </g>
+        ))}
+        {fam.map((p, i) => (
+          <Person key={i} x={p.x} y={812} h={p.h} f={f} shadow={false} flip={p.flip} look={p.look} arm={i === 2 || i === 3 ? lerp(15, 115, toast) : lerp(10, 95, toast) + Math.sin(f / 9 + i) * 4} holding={glass} />
+        ))}
+        <Person x={1250} y={812} h={112} child f={f} shadow={false} look={{skin: '#F0CBA5', top: '#5B8DB8', bottom: '#3F6EA8', hair: '#E3B26A'}} flip arm={40 + Math.sin(f / 6) * 20} />
+        <rect x={630} y={756} width={700} height={10} fill="#FFFFFF" />
+        <path d={`M634,766 H1326 V820 ${Array.from({length: 14}, (_, i) => `q-24.7,12 -49.4,0`).join(' ')} Z`} fill="#F7F3EA" />
+        <rect x={634} y={766} width={692} height={6} fill="#000" opacity={0.06} />
+        {[720, 820, 1060, 1160].map((px) => (
+          <ellipse key={px} cx={px} cy={758} rx={22} ry={5} fill="#fff" stroke="#e2dccf" strokeWidth={2} />
+        ))}
+        <ellipse cx={950} cy={752} rx={42} ry={14} fill="#A86B3C" />
+        <path d="M918,752 a32,9 0 0 1 64,0 M930,752 a20,6 0 0 1 40,0 M942,752 a8,3 0 0 1 16,0" stroke="#E8C48A" strokeWidth={3} fill="none" />
+        <HoneyJar x={870} y={760} s={0.55} />
+        <rect x={1022} y={706} width={14} height={52} rx={4} fill="#2F4A2A" />
+        <rect x={1025} y={692} width={8} height={16} fill="#2F4A2A" />
+      </Par>
+      <Motes seed={169} n={30} f={f} color="#FFE3A0" />
+    </Cam>
+  );
+};

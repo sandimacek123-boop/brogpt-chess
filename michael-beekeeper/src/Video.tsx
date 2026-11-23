@@ -5,8 +5,8 @@ import '@fontsource/playfair-display/400-italic.css';
 import '@fontsource/playfair-display/700.css';
 import '@fontsource/montserrat/500.css';
 import '@fontsource/montserrat/600.css';
-import {H, SANS, SERIF, W, clamp, ease, hexGrid, hexPoints, lerp, ramp, window01} from './lib';
-import {Autumn, BeeDay, Bled, Birth, Dedek, Freedom, Grandkids, OwnHives, Outro, Title, Wedding, type SceneProps} from './scenes';
+import {H, SANS, SERIF, SUB, W, clamp, ease, hexGrid, hexPoints, lerp, ramp, window01} from './lib';
+import {Anniversary, Autumn, BeeDay, Bled, Birth, Daughter, Dedek, Freedom, Grandkids, Market, OwnHives, Outro, Planica, Title, Wedding, type SceneProps} from './scenes';
 
 // wait for every weight (incl. latin-ext for č š ž) before the first frame is captured
 const fontsReady = delayRender('fonts');
@@ -27,22 +27,26 @@ const CHAPTERS: Chapter[] = [
     {text: 'His *dedek* keeps bees. At seven, Michael holds his first honeycomb, and he is hooked for life.', from: 10, to: 150},
     {text: 'The *kranjska čebela*: the gentle Carniolan honeybee, born right here in Slovenia.', from: 156, to: 292},
   ]},
-  {C: Bled, start: 780, end: 1020, year: 1964, captions: [{text: 'Summers at Lake Bled: rowing a *pletna* to the island, ringing the wishing bell, *kremšnita* with friends.', from: 10, to: 232}]},
-  {C: Wedding, start: 1020, end: 1260, year: 1970, captions: [{text: 'He marries Marija in the church on the hill. The bells ring across the whole valley.', from: 10, to: 232}]},
-  {C: OwnHives, start: 1260, end: 1560, year: 1976, hex: true, captions: [
+  {C: Planica, start: 780, end: 1020, year: 1960, captions: [{text: 'Every March he goes to *Planica* with his father, to watch the ski jumpers fly.', from: 10, to: 232}]},
+  {C: Bled, start: 1020, end: 1260, year: 1964, captions: [{text: 'Summers at Lake Bled: rowing a *pletna* to the island, ringing the wishing bell, *kremšnita* with friends.', from: 10, to: 232}]},
+  {C: Wedding, start: 1260, end: 1500, year: 1970, captions: [{text: 'He marries Marija in the church on the hill. The bells ring across the whole valley.', from: 10, to: 232}]},
+  {C: Daughter, start: 1500, end: 1740, year: 1973, captions: [{text: 'Their daughter Ana is born. Michael plants a linden tree, a *lipa*, in front of the house for her.', from: 10, to: 232}]},
+  {C: OwnHives, start: 1740, end: 2040, year: 1976, hex: true, captions: [
     {text: 'Michael builds his own *čebelnjak*: twenty hives, every front painted by hand.', from: 14, to: 150},
     {text: 'Each summer the jars line up on the bench. The honey tastes like linden, acacia and mountain meadow.', from: 156, to: 292},
   ]},
-  {C: Freedom, start: 1560, end: 1800, year: 1991, captions: [{text: '25 June 1991. Slovenia declares independence. That night Michael opens a jar of his very best honey.', from: 10, to: 232}]},
-  {C: Grandkids, start: 1800, end: 2040, year: 2005, captions: [{text: 'Now *he* is the dedek. He teaches his grandkids to move slowly, and to talk softly to the bees.', from: 10, to: 232}]},
-  {C: BeeDay, start: 2040, end: 2280, year: 2018, hex: true, captions: [{text: 'The whole world celebrates the first World Bee Day, because Slovenia asked. Michael has been celebrating it his whole life.', from: 14, to: 232}]},
-  {C: Autumn, start: 2280, end: 2580, year: 2024, captions: [
+  {C: Market, start: 2040, end: 2280, year: 1985, captions: [{text: 'On Saturdays he sells honey at the market in Ljubljana. Regulars come back every week for his *med*.', from: 10, to: 232}]},
+  {C: Freedom, start: 2280, end: 2520, year: 1991, captions: [{text: '25 June 1991. Slovenia declares independence. That night Michael opens a jar of his very best honey.', from: 10, to: 232}]},
+  {C: Grandkids, start: 2520, end: 2760, year: 2005, captions: [{text: 'Now *he* is the dedek. He teaches his grandkids to move slowly, and to talk softly to the bees.', from: 10, to: 232}]},
+  {C: BeeDay, start: 2760, end: 3000, year: 2018, hex: true, captions: [{text: 'The whole world celebrates the first World Bee Day, because Slovenia asked. Michael has been celebrating it his whole life.', from: 14, to: 232}]},
+  {C: Anniversary, start: 3000, end: 3240, year: 2020, captions: [{text: 'Fifty years with Marija. The whole family under Ana\'s *lipa*, now taller than the house.', from: 10, to: 232}]},
+  {C: Autumn, start: 3240, end: 3540, year: 2024, captions: [
     {text: 'Autumn 2024. Michael, 79, sits by his hives one last golden evening.', from: 10, to: 160},
     {text: 'He leaves forty hives, a valley full of flowers, and grandkids who still talk softly to the bees.', from: 166, to: 296},
   ]},
-  {C: Outro, start: 2580, end: 2880, hex: true},
+  {C: Outro, start: 3540, end: 3840, hex: true},
 ];
-export const TOTAL = 2880;
+export const TOTAL = 3840; // in 30 fps animation frames = 128 s
 
 const HEX = hexGrid(66);
 const HexMask = ({id, p}: {id: string; p: number}) => (
@@ -86,14 +90,14 @@ const BeeIcon = () => (
 );
 
 export const Michael = () => {
-  const frame = useCurrentFrame();
+  const frame = useCurrentFrame() / SUB;
   const active = CHAPTERS.map((c, i) => ({...c, i})).filter((c) => frame >= c.start - T && frame < c.end);
   const current = [...active].reverse()[0];
   const prevYear = CHAPTERS.slice(0, current.i).reverse().find((c) => c.year)?.year ?? BORN;
   const tp = clamp((frame - (current.start - T)) / T);
   const year = current.year ? Math.round(lerp(current.i === 1 ? BORN : prevYear, current.year, ease((frame - current.start + T) / 30))) : prevYear;
   const age = year - BORN;
-  const hudOn = window01(frame, 240 - T, 2580, 24);
+  const hudOn = window01(frame, 240 - T, 3540, 24);
   const blackIn = 1 - ramp(frame, 0, 20);
   const blackOut = ramp(frame, TOTAL - 50, TOTAL - 4);
 
@@ -154,10 +158,11 @@ export const Michael = () => {
       <div style={{position: 'absolute', left: 260, right: 260, bottom: 54, height: 30, opacity: hudOn}}>
         <div style={{position: 'absolute', left: 0, right: 0, top: 14, height: 2, background: 'rgba(255,255,255,0.3)'}} />
         <div style={{position: 'absolute', left: 0, width: `${(age / 79) * 100}%`, top: 13, height: 4, borderRadius: 2, background: '#F2B233'}} />
-        {CHAPTERS.filter((c) => c.year).map((c) => (
-          <div key={c.year} style={{position: 'absolute', left: `${((c.year! - BORN) / 79) * 100}%`, top: 8, transform: 'translateX(-50%)', textAlign: 'center'}}>
+        {CHAPTERS.filter((c) => c.year).map((c, k) => (
+          // labels alternate below/above the line so close years (2018, 2020) never collide
+          <div key={c.year} style={{position: 'absolute', left: `${((c.year! - BORN) / 79) * 100}%`, top: k % 2 ? -22 : 8, transform: 'translateX(-50%)', textAlign: 'center', display: 'flex', flexDirection: k % 2 ? 'column-reverse' : 'column'}}>
             <div style={{width: 2, height: 14, margin: '0 auto', background: c.year! <= year ? '#F2B233' : 'rgba(255,255,255,0.45)'}} />
-            <div style={{fontFamily: SANS, fontWeight: 600, fontSize: 13, letterSpacing: 2, color: 'rgba(255,255,255,0.75)', marginTop: 6}}>{c.year}</div>
+            <div style={{fontFamily: SANS, fontWeight: 600, fontSize: 13, letterSpacing: 2, color: 'rgba(255,255,255,0.75)', margin: k % 2 ? '0 0 6px' : '6px 0 0'}}>{c.year}</div>
           </div>
         ))}
         <div style={{position: 'absolute', left: `${(age / 79) * 100}%`, top: -10, transform: `translate(-50%,0) translateY(${Math.sin(frame / 6) * 2}px)`}}>
@@ -167,7 +172,7 @@ export const Michael = () => {
 
       <svg width={W} height={H} style={{position: 'absolute', inset: 0, mixBlendMode: 'overlay', opacity: 0.08}}>
         <filter id="grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={frame % 12} />
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} seed={Math.floor(frame) % 12} /* grain at 30 fps like film, and kinder to the encoder */ />
           <feColorMatrix type="saturate" values="0" />
         </filter>
         <rect width={W} height={H} filter="url(#grain)" />

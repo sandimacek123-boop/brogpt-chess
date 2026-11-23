@@ -3,7 +3,7 @@
 musette accordion, music box, guitar oom-pah-pah, strings, church bells and a
 hum of bees. Synthesised from scratch with numpy: no samples, nothing downloaded.
 
-90 BPM in 3/4 -> one bar = 2 s = 60 video frames; 48 bars = 96 s (the video length).
+90 BPM in 3/4 -> one bar = 2 s; 64 bars = 128 s (the video length).
 Usage: python3 scripts/music.py  ->  public/music.wav
 """
 import pathlib
@@ -14,7 +14,7 @@ import numpy as np
 SR = 44100
 BEAT = 60 / 90
 BAR = 3 * BEAT
-BARS = 48
+BARS = 64
 N = int((BARS * BAR + 4) * SR)  # + reverb tail, trimmed at the end
 rng = np.random.default_rng(1945)
 
@@ -126,21 +126,25 @@ B_MEL = [[(76, 2), (79, 1)], [(74, 2), (71, 1)], [(72, 1), (71, 1), (69, 1)], [(
 
 # per bar: chord, melody, lead instrument, and layer levels (scenes are noted on the right)
 bars = []
-for c in ['G', 'Em', 'C', 'D']:                                             # 0-8 s   title
+for c in ['G', 'Em', 'C', 'D']:                                             # 0-8 s     title
     bars.append(dict(ch=c, mel=None, lead=None, arp=1, pad=0.7))
-for c, m in zip(A_CH, A_MEL):                                                # 8-24 s  birth, dedek's bees
+for c, m in zip(A_CH, A_MEL):                                                # 8-24 s    birth, dedek's bees
     bars.append(dict(ch=c, mel=m, lead='box', pah=0.45, bass=0.6, pad=0.5))
-for c, m in zip(B_CH, B_MEL):                                                # 24-40 s Bled, wedding
+for c, m in zip(B_CH, B_MEL):                                                # 24-40 s   Planica, Bled
     bars.append(dict(ch=c, mel=m, lead='acc', pah=1, bass=1, pad=0.35))
-for i, (c, m) in enumerate(zip(A_CH, A_MEL)):                               # 40-56 s own bee house, 1991
-    bars.append(dict(ch=c, mel=m, lead='acc', pah=1, bass=1, pad=1.0 if i >= 6 else 0.6, box8=i >= 6))
-for c, m in zip(B_CH, B_MEL):                                                # 56-72 s freedom, grandkids
-    bars.append(dict(ch=c, mel=m, lead='acc', pah=1, bass=1, pad=0.9, box8=True))
-bars.append(dict(ch='C', mel=[(76, 3)], lead='acc', pah=0.8, bass=0.8, pad=0.8))       # 72-76 s World Bee Day
-bars.append(dict(ch='D', mel=[(74, 2), (78, 1)], lead='acc', pah=0.6, bass=0.7, pad=0.7))
-for c, m in zip(A_CH, A_MEL):                                                # 76-92 s last autumn
+for c, m in zip(A_CH, A_MEL):                                                # 40-56 s   wedding, Ana
+    bars.append(dict(ch=c, mel=m, lead='acc', pah=0.9, bass=0.9, pad=0.5))
+for c, m in zip(B_CH, B_MEL):                                                # 56-72 s   own bee house, market
+    bars.append(dict(ch=c, mel=m, lead='acc', pah=1, bass=1, pad=0.7, box8=True))
+bars.append(dict(ch='C', mel=[(76, 3)], lead='acc', pah=0.8, bass=0.8, pad=0.8))       # 72-76 s
+bars.append(dict(ch='D', mel=[(74, 2), (78, 1)], lead='acc', pah=0.6, bass=0.7, pad=0.9))
+for i, (c, m) in enumerate(zip(A_CH, A_MEL)):                               # 76-92 s   1991, grandkids
+    bars.append(dict(ch=c, mel=m, lead='acc', pah=1, bass=1, pad=1.0 if i < 2 else 0.7, box8=True))
+for c, m in zip(B_CH, B_MEL):                                                # 92-108 s  World Bee Day, anniversary
+    bars.append(dict(ch=c, mel=m, lead='acc', pah=0.9, bass=0.9, pad=0.8, box8=True))
+for c, m in zip(A_CH, A_MEL):                                                # 108-124 s last autumn
     bars.append(dict(ch=c, mel=m, lead='box', bass=0.35, pad=0.55))
-bars.append(dict(ch='C', mel=[(76, 2), (72, 1)], lead='box', pad=0.6))                   # 92-96 s outro
+bars.append(dict(ch='C', mel=[(76, 2), (72, 1)], lead='box', pad=0.6))                   # 124-128 s outro
 bars.append(dict(ch='G', mel=[(79, 3)], lead='box', pad=0.6, bass=0.4))
 assert len(bars) == BARS
 
@@ -175,11 +179,11 @@ for b, bar in enumerate(bars):
                 add(box_st, musicbox(m + 24, 1.6), t, 0.35, 0.35)
             t += beats * BEAT
 
-for t in (34.0, 35.0, 36.0, 37.0):          # wedding bells
+for t in (42.0, 43.0, 44.0, 45.0):          # wedding bells
     add(fx_st, bell(67), t, -0.5, 0.22)
-add(fx_st, bell(55, 8.0), 84.0, 0.4, 0.16)  # one distant bell for Michael
+add(fx_st, bell(55, 8.0), 116.0, 0.4, 0.16)  # one distant bell for Michael
 
-for start, end in ((16, 26), (42, 52), (68, 76), (86, 96)):  # bees at the hives
+for start, end in ((16, 26), (58, 68), (84, 100), (120, 128)):  # bees at the hives
     for base, pan in ((205, -0.6), (238, 0.5), (262, 0.0)):
         sig = buzz(end - start, base)
         sig *= np.clip(np.minimum(np.arange(len(sig)), len(sig) - np.arange(len(sig))) / (1.2 * SR), 0, 1)
