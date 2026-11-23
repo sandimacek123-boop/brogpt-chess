@@ -1,0 +1,26 @@
+{
+  "name": "michael-beekeeper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Michael — a Slovenian beekeeper's life (1945–2024). Remotion, 1920x1080, 30 fps",
+  "type": "module",
+  "scripts": {
+    "music": "python3 scripts/music.py",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Michael out/Michael_Slovenian_Beekeeper.mp4",
+    "still": "remotion still src/index.ts Michael",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/montserrat": "5.3.0",
+    "@fontsource/playfair-display": "5.2.8",
+    "@remotion/cli": "4.0.540",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "remotion": "4.0.540"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "typescript": "5.9.3"
+  }
+}
