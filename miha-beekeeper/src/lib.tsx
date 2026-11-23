@@ -1,4 +1,4 @@
-// Drawing primitives for the Michael film: everything is plain SVG, seeded and
+// Drawing primitives for the Miha film: everything is plain SVG, seeded and
 // frame-deterministic, so the same frame always renders the same picture.
 import React from 'react';
 
@@ -28,7 +28,7 @@ export const ramp = (f: number, a: number, b: number) => ease((f - a) / (b - a))
 export const window01 = (f: number, a: number, b: number, len = 18) => Math.min(ramp(f, a, a + len), 1 - ramp(f, b - len, b));
 
 // ------------------------------------------------------------------ terrain
-export type Ridge = {d: string; yAt: (x: number) => number};
+export type Ridge = {d: string; yAt: (x: number) => number; id?: string; base?: number; amp?: number};
 /** A mountain/hill silhouette. sharp=0 → rolling hills, sharp=1 → alpine ridges. */
 export const makeRidge = (seed: number, baseY: number, amp: number, sharp = 0.6, scale = 1, octaves = 6): Ridge => {
   const r = rng(seed);
@@ -49,7 +49,7 @@ export const makeRidge = (seed: number, baseY: number, amp: number, sharp = 0.6,
   };
   const pts: string[] = [];
   for (let x = -260; x <= W + 260; x += 8) pts.push(`${x},${yAt(x).toFixed(1)}`);
-  return {d: `M-260,${H + 300} L${pts.join(' L')} L${W + 260},${H + 300} Z`, yAt};
+  return {d: `M-260,${H + 300} L${pts.join(' L')} L${W + 260},${H + 300} Z`, yAt, id: `r${seed}`, base: baseY, amp};
 };
 
 export const Grad = ({id, stops, x2 = 0, y2 = 1}: {id: string; stops: [number, string, number?][]; x2?: number; y2?: number}) => (
@@ -636,3 +636,62 @@ export const Butterflies = ({seed, n, f, cx, cy, rx, ry, colors = ['#F2C14E', '#
     })}
   </g>
 );
+
+// ------------------------------------------------------------------ polish: shaded land, snow, bokeh
+const mix = (a: string, b: string, t: number) => {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return `rgb(${pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(',')})`;
+};
+
+/** A ridge filled with a sunlit-top → shaded-base gradient, optionally snow-capped. */
+export const Land = ({r, c, snow}: {r: Ridge; c: string; snow?: string}) => {
+  const base = r.base!;
+  const amp = r.amp!;
+  let snowD = '';
+  if (snow) {
+    const pts: string[] = [];
+    for (let x = -260; x <= W + 260; x += 12) pts.push(`${x},${(base - amp * 0.12 + Math.sin(x / 37) * 12 + Math.sin(x / 11 + 2) * 6).toFixed(1)}`);
+    snowD = `M-260,-500 L${W + 260},-500 L${pts.reverse().join(' L')} Z`;
+  }
+  return (
+    <>
+      <defs>
+        <linearGradient id={`${r.id}g`} gradientUnits="userSpaceOnUse" x1={0} y1={base - amp} x2={0} y2={base + amp + 260}>
+          <stop offset={0} stopColor={mix(c, '#ffffff', 0.13)} />
+          <stop offset={1} stopColor={mix(c, '#000000', 0.16)} />
+        </linearGradient>
+        {snow && (
+          <clipPath id={`${r.id}c`}>
+            <path d={r.d} />
+          </clipPath>
+        )}
+      </defs>
+      <path d={r.d} fill={`url(#${r.id}g)`} />
+      {snow && <path d={snowD} fill={snow} opacity={0.92} clipPath={`url(#${r.id}c)`} />}
+    </>
+  );
+};
+
+/** Soft out-of-focus light orbs drifting in front of the lens */
+export const Bokeh = ({seed, n, f, color = '#FFF3D0', opacity = 0.16}: {seed: number; n: number; f: number; color?: string; opacity?: number}) => {
+  const r = rng(seed);
+  const id = `bk${seed}`;
+  return (
+    <g>
+      <defs>
+        <radialGradient id={id}>
+          <stop offset="0" stopColor={color} stopOpacity={0.9} />
+          <stop offset="0.7" stopColor={color} stopOpacity={0.5} />
+          <stop offset="1" stopColor={color} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      {Array.from({length: n}, (_, i) => {
+        const rr = 18 + r() * 62;
+        const x = ((r() * (W + 400) + f * (0.2 + r() * 0.4)) % (W + 400)) - 200;
+        const y = r() * H * 0.85 + Math.sin(f / 50 + i) * 20;
+        return <circle key={i} cx={x} cy={y} r={rr} fill={`url(#${id})`} opacity={opacity * (0.4 + 0.6 * Math.abs(Math.sin(f / 40 + i * 1.3)))} />;
+      })}
+    </g>
+  );
+};

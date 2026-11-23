@@ -1,8 +1,8 @@
-# Michael: a Slovenian beekeeper's life
+# Miha: a Slovenian beekeeper's life
 
-A 2-minute illustrated short about Michael (1945–2024). He grew up in a village under Triglav and kept bees until he was 79. It's built with Remotion and exported at 2560×1440, 60 fps, H.264, with an original soundtrack. The scenes are authored at 1920×1080 in 30 fps time and rendered with sub-frames for smooth 60 fps motion.
+A 2-minute illustrated short about Miha (1945–2024). He grew up in a village under Triglav and kept bees until he was 79. It's built with Remotion and exported at 2560×1440, 60 fps, H.264, with an original soundtrack. The scenes are authored at 1920×1080 in 30 fps time and rendered with sub-frames for smooth 60 fps motion.
 
-**Final export:** `out/Michael_Slovenian_Beekeeper.mp4`
+**Final export:** `out/Miha_Slovenian_Beekeeper.mp4`
 
 ## Chapters
 
@@ -14,7 +14,7 @@ A 2-minute illustrated short about Michael (1945–2024). He grew up in a villag
 | 0:26 | 1960 (15) | Planica with his father: a ski jumper flies, the crowd cheers, snow falls |
 | 0:34 | 1964 (19) | Lake Bled: pletna boat, swans, the island church, the castle on the cliff |
 | 0:42 | 1970 (25) | Marries Marija: church bells, cherry blossoms, doves |
-| 0:50 | 1973 (28) | Daughter Ana is born, and Michael plants a lipa (linden tree) for her |
+| 0:50 | 1973 (28) | Daughter Ana is born, and Miha plants a lipa (linden tree) for her |
 | 0:58 | 1976 (31) | Builds his own bee house: 20 hives, hand-painted panjske končnice, honey jars |
 | 1:08 | 1985 (40) | Selling *med* at the Ljubljana market: castle, Franciscan church, the bridge, pigeons |
 | 1:16 | 1991 (46) | 25 June 1991, independence: fireworks, the Slovenian flag goes up |
@@ -33,11 +33,11 @@ As the film moves between chapters, the year/age counter ticks forward and so do
 ## Run it
 
 ```bash
-cd michael-beekeeper
+cd miha-beekeeper
 npm install
 npm run music                                 # → public/music.wav (already committed)
 npm run studio                                # live preview
-npm run render                                # → out/Michael_Slovenian_Beekeeper.mp4
+npm run render                                # → out/Miha_Slovenian_Beekeeper.mp4
 node scripts/stills.mjs 800 1800 4360         # QC stills (60 fps frame numbers) → out/stills/
 ```
 

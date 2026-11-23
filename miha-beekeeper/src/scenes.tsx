@@ -1,16 +1,20 @@
-// The fifteen chapters of Michael's life. Each scene gets its local frame f
+// The fifteen chapters of Miha's life. Each scene gets its local frame f
 // (f = 24 when it is fully on screen) and its duration, and returns SVG.
 import React from 'react';
 import {
-  Bee, BeeHouse, Birds, Butterflies, Church, Clouds, CombFrame, Falling, Grass, Flowers, Forest, Glow, Grad, Hive, HoneyJar, House, Kozolec, Mist, Motes, Person, RoundTree,
+  Bee, BeeHouse, Birds, Bokeh, Land, Butterflies, Church, Clouds, CombFrame, Falling, Grass, Flowers, Forest, Glow, Grad, Hive, HoneyJar, House, Kozolec, Mist, Motes, Person, RoundTree,
   SANS, SERIF, Sky, Spruce, Stars, Sun, Swarm, Triglav, W, H, clamp, easeOut, hexGrid, hexPoints, lerp, makeRidge, ramp, rng,
 } from './lib';
 
 export type SceneProps = {f: number; dur: number};
 
 const Cam = ({f, dur, z0 = 1, z1 = 1.08, ox = W / 2, oy = H / 2, children}: SceneProps & {z0?: number; z1?: number; ox?: number; oy?: number; children: React.ReactNode}) => {
-  const s = lerp(z0, z1, f / dur);
-  return <g transform={`translate(${ox},${oy}) scale(${s}) translate(${-ox},${-oy})`}>{children}</g>;
+  const s = lerp(z0, z1, f / dur) * 1.01;
+  // slow handheld float so no shot is ever perfectly still
+  const dx = Math.sin(f / 70) * 5;
+  const dy = Math.cos(f / 90) * 3.5;
+  const rot = Math.sin(f / 110) * 0.18;
+  return <g transform={`translate(${ox + dx},${oy + dy}) rotate(${rot}) scale(${s}) translate(${-ox},${-oy})`}>{children}</g>;
 };
 /** parallax: shifts a layer sideways as the scene progresses */
 const Par = ({f, dur, d, children}: SceneProps & {d: number; children: React.ReactNode}) => <g transform={`translate(${(0.5 - f / dur) * d},0)`}>{children}</g>;
@@ -50,24 +54,24 @@ export const Title = ({f, dur}: SceneProps) => {
       <Sun id="t1sun" x={1380} y={lerp(800, 610, dawn)} r={46} core="#FFE2B0" glow="#FFB070" />
       <Birds seed={16} n={4} f={f} color="#2a2340" y0={470} y1={560} size={8} />
       <Par f={f} dur={dur} d={20}>
-        <path d={t1.far.d} fill="#6E5D8C" />
+        <Land r={t1.far} c="#6E5D8C" snow="#EBC9D6" />
       </Par>
       <Par f={f} dur={dur} d={40}>
         <Triglav x={960} y={900} s={0.9} rock="#7A6A98" shade="#5A4C7A" snow={`rgb(${246},${lerp(200, 224, dawn)},${lerp(214, 226, dawn)})`} snowShade="#CFA9C3" />
         <Mist id="t1m" y={720} h={120} color="#F5C6B8" opacity={0.4} f={f} />
       </Par>
       <Par f={f} dur={dur} d={80}>
-        <path d={t1.mid.d} fill="#3F3560" />
+        <Land r={t1.mid} c="#3F3560" />
         <Forest seed={14} ridge={t1.mid} n={70} h={70} color="#3F3560" />
       </Par>
       <Par f={f} dur={dur} d={140}>
-        <path d={t1.near.d} fill="#211B36" />
+        <Land r={t1.near} c="#211B36" />
         <Forest seed={15} ridge={t1.near} n={90} h={120} color="#211B36" />
       </Par>
       <rect x={-200} y={-200} width={W + 400} height={H + 400} fill="#0B0F22" opacity={0.5 * (1 - dawn)} />
       <g opacity={ramp(f, 40, 85)} transform={`translate(960,${lerp(300, 290, ramp(f, 40, 120))})`}>
         <text textAnchor="middle" fontFamily={SERIF} fontWeight={700} fontSize={170} letterSpacing={lerp(60, 26, ramp(f, 40, 140))} fill="#FFF4E3" style={{filter: 'drop-shadow(0 6px 30px rgba(40,10,40,0.55))'}}>
-          MICHAEL
+          MIHA
         </text>
       </g>
       <text x={960} y={370} textAnchor="middle" fontFamily={SANS} fontWeight={600} fontSize={26} letterSpacing={14} fill="#FFE2B8" opacity={ramp(f, 80, 115)}>
@@ -98,16 +102,16 @@ export const Birth = ({f, dur}: SceneProps) => {
       <Clouds seed={27} n={6} f={f} y1={300} />
       <Birds seed={28} n={5} f={f} y0={150} y1={320} color="#3a4a5a" />
       <Par f={f} dur={dur} d={16}>
-        <path d={t2.far.d} fill="#A3B8CF" />
+        <Land r={t2.far} c="#A3B8CF" snow="#F4F8FC" />
         <Triglav x={660} y={590} s={0.62} rock="#93A9C3" shade="#7A92B0" snow="#FFFFFF" snowShade="#DCE6F0" />
         <Mist id="t2m" y={590} h={110} color="#FFFFFF" opacity={0.55} f={f} />
       </Par>
       <Par f={f} dur={dur} d={34}>
-        <path d={t2.mid.d} fill="#5F8A6A" />
+        <Land r={t2.mid} c="#5F8A6A" />
         <Forest seed={25} ridge={t2.mid} n={120} h={60} color="#436F50" />
       </Par>
       <Par f={f} dur={dur} d={56}>
-        <path d={t2.hill.d} fill="#8DB463" />
+        <Land r={t2.hill} c="#8DB463" />
         <Church x={1330} y={t2.hill.yAt(1330) + 18} s={0.78} />
         {[300, 780, 1010, 1520, 1680].map((x, i) => (
           <RoundTree key={x} x={x} y={t2.hill.yAt(x) + 22} h={110 + (i % 2) * 30} leaf="#4F7F3E" leaf2="#5E9148" seed={i + 3} f={f} />
@@ -118,7 +122,7 @@ export const Birth = ({f, dur}: SceneProps) => {
         <Glow id="t2g" x={905 - 34 * 0.86} y={t2.hill.yAt(905) + 26 - 45 * 0.86} r={70} color="#FFD27A" opacity={0.5 + 0.3 * Math.sin(f / 9)} />
       </Par>
       <Par f={f} dur={dur} d={100}>
-        <path d={t2.near.d} fill="#6E9C49" />
+        <Land r={t2.near} c="#6E9C49" />
         <Grass seed={29} ridge={t2.near} n={420} color="#5E8C3E" f={f} />
         <Kozolec x={70} y={t2.near.yAt(200) + 30} s={0.9} />
         <Flowers seed={26} ridge={t2.near} n={160} colors={['#FFFFFF', '#F7D44C', '#C9A0DC', '#F28C8C']} size={4.5} />
@@ -135,17 +139,17 @@ export const Dedek = ({f, dur}: SceneProps) => (
     <Sun id="t3sun" x={1700} y={150} r={50} core="#FFF4D6" glow="#FFD98C" />
     <Clouds seed={36} n={5} f={f} y1={280} color="#FFF8EA" />
     <Par f={f} dur={dur} d={14}>
-      <path d={t3.far.d} fill="#AEB9C6" />
+      <Land r={t3.far} c="#AEB9C6" snow="#F7F3EC" />
       <Mist id="t3m" y={540} h={90} color="#FFF3DD" opacity={0.6} f={f} />
     </Par>
     <Par f={f} dur={dur} d={30}>
-      <path d={t3.hill.d} fill="#86A95B" />
+      <Land r={t3.hill} c="#86A95B" />
       {[120, 330, 1420, 1600, 1810].map((x, i) => (
         <RoundTree key={x} x={x} y={t3.hill.yAt(x) + 30} h={150 + (i % 3) * 25} leaf="#5B8A3F" leaf2="#6E9C4A" dots="#D9443A" seed={i + 11} f={f} />
       ))}
     </Par>
     <Par f={f} dur={dur} d={60}>
-      <path d={t3.ground.d} fill="#6E9B47" />
+      <Land r={t3.ground} c="#6E9B47" />
       <Grass seed={38} ridge={t3.ground} n={420} color="#5E8A3C" f={f} />
       <Flowers seed={34} ridge={t3.ground} n={120} colors={['#FFFFFF', '#F7D44C', '#B48FD8']} size={4.5} />
       <BeeHouse x={720} y={805} s={1.15} seed={3} />
@@ -157,6 +161,7 @@ export const Dedek = ({f, dur}: SceneProps) => (
     </Par>
     <Rays id="t3r" x={1700} y={150} color="#FFF1C8" opacity={0.22} f={f} />
     <Motes seed={35} n={50} f={f} />
+    <Bokeh seed={39} n={10} f={f} color="#FFF1C8" />
   </Cam>
 );
 
@@ -165,8 +170,8 @@ const WATER = 660;
 const t4 = {far: makeRidge(41, 430, 160, 0.82, 0.7), mid: makeRidge(42, 610, 55, 0.2, 1.4)};
 const BledLand = ({f}: {f: number}) => (
   <>
-    <path d={t4.far.d} fill="#93B2CE" />
-    <path d={t4.mid.d} fill="#3F6E58" />
+    <Land r={t4.far} c="#93B2CE" snow="#F2F7FB" />
+    <Land r={t4.mid} c="#3F6E58" />
     <Forest seed={43} ridge={t4.mid} n={150} h={55} color="#2F5A46" />
     {/* castle cliff */}
     <path d="M1360,672 L1410,520 L1440,420 L1470,330 L1600,318 L1700,330 L1760,380 L1820,470 L1920,560 L1960,672 Z" fill="#7B7C70" />
@@ -259,10 +264,10 @@ export const Wedding = ({f, dur}: SceneProps) => (
     <Clouds seed={56} n={5} f={f} y1={280} color="#FFF5F2" />
     <Birds seed={57} n={5} f={f} y0={120} y1={300} color="#FFFFFF" size={13} speed={2} />
     <Par f={f} dur={dur} d={16}>
-      <path d={t5.far.d} fill="#B7C4DA" />
+      <Land r={t5.far} c="#B7C4DA" snow="#FBF1F3" />
     </Par>
     <Par f={f} dur={dur} d={36}>
-      <path d={t5.hill.d} fill="#8DBA66" />
+      <Land r={t5.hill} c="#8DBA66" />
       <Church x={1150} y={t5.hill.yAt(1150) + 24} s={1.05} f={f} ring={1 - ramp(f, 150, 220)} />
       {[260, 620, 1640, 1820].map((x, i) => (
         <RoundTree key={x} x={x} y={t5.hill.yAt(x) + 30} h={180 + (i % 2) * 40} leaf="#F2B3C0" leaf2="#F8CFD8" trunk="#6b4a3a" seed={i + 50} f={f} />
@@ -272,7 +277,7 @@ export const Wedding = ({f, dur}: SceneProps) => (
       ))}
     </Par>
     <Par f={f} dur={dur} d={70}>
-      <path d={t5.ground.d} fill="#76A653" />
+      <Land r={t5.ground} c="#76A653" />
       <Grass seed={58} ridge={t5.ground} n={420} color="#64934A" f={f} />
       <Flowers seed={54} ridge={t5.ground} n={120} colors={['#FFFFFF', '#F7C4D0', '#F7D44C']} size={4.5} />
       <Person x={820} y={820} h={225} look={{skin: '#F0CBA5', top: '#FFFFFF', dress: true, veil: '#FFFFFF', hair: '#7A4A2A'}} arm={-25} />
@@ -281,6 +286,7 @@ export const Wedding = ({f, dur}: SceneProps) => (
       <circle cx={850} cy={735} r={6} fill="#E8534A" />
     </Par>
     <Falling seed={55} n={70} f={f} colors={['#F8C9D4', '#FFFFFF', '#F2A7B8']} size={8} />
+    <Bokeh seed={59} n={9} f={f} color="#FFE3EA" />
   </Cam>
 );
 
@@ -324,14 +330,14 @@ export const OwnHives = ({f, dur}: SceneProps) => {
       <Sun id="t6sun" x={300} y={260} r={50} core="#FFF0C8" glow="#FFC77A" />
       <Clouds seed={66} n={5} f={f} y1={280} color="#FFF1DC" />
       <Par f={f} dur={dur} d={14}>
-        <path d={t6.far.d} fill="#A49EB4" />
+        <Land r={t6.far} c="#A49EB4" snow="#FBE9DA" />
       </Par>
       <Par f={f} dur={dur} d={30}>
-        <path d={t6.hill.d} fill="#7E9B55" />
+        <Land r={t6.hill} c="#7E9B55" />
         <Forest seed={64} ridge={t6.hill} n={60} h={70} color="#506E3C" x0={1200} />
       </Par>
       <Par f={f} dur={dur} d={50}>
-        <path d={t6.ground.d} fill="#6E9343" />
+        <Land r={t6.ground} c="#6E9343" />
         <Grass seed={67} ridge={t6.ground} n={420} color="#5D8237" f={f} />
         <Flowers seed={65} ridge={t6.ground} n={90} colors={['#FFFFFF', '#F7D44C', '#E8786A']} size={4.5} />
         <BeeHouse x={520} y={800} s={1.1} seed={7} rows={4} cols={5} />
@@ -444,8 +450,8 @@ export const Freedom = ({f, dur}: SceneProps) => {
           </g>
         );
       })}
-      <path d={t7.far.d} fill="#141B38" />
-      <path d={t7.town.d} fill="#0E1329" />
+      <Land r={t7.far} c="#141B38" snow="#1F2848" />
+      <Land r={t7.town} c="#0E1329" />
       {[150, 330, 470, 1480, 1640, 1790].map((x, i) => (
         <g key={x}>
           <House x={x} y={t7.town.yAt(x) + 30} s={0.55 + (i % 2) * 0.1} smoke={false} wall="#121833" roof="#0B0F22" wood="#121833" />
@@ -478,16 +484,16 @@ export const Grandkids = ({f, dur}: SceneProps) => (
     <Clouds seed={87} n={6} f={f} y1={300} />
     <Birds seed={88} n={4} f={f} y0={140} y1={300} color="#34445a" />
     <Par f={f} dur={dur} d={14}>
-      <path d={t8.far.d} fill="#9EB6CF" />
+      <Land r={t8.far} c="#9EB6CF" snow="#F4F8FC" />
       <Triglav x={1380} y={560} s={0.55} rock="#93A9C3" shade="#7A92B0" snow="#FFFFFF" snowShade="#DCE6F0" />
     </Par>
     <Par f={f} dur={dur} d={30}>
-      <path d={t8.mid.d} fill="#78A657" />
+      <Land r={t8.mid} c="#78A657" />
       <Forest seed={84} ridge={t8.mid} n={50} h={60} color="#466F3C" x0={900} />
       <Kozolec x={160} y={t8.mid.yAt(300) + 60} s={0.62} />
     </Par>
     <Par f={f} dur={dur} d={60}>
-      <path d={t8.ground.d} fill="#6FA046" />
+      <Land r={t8.ground} c="#6FA046" />
       <Grass seed={89} ridge={t8.ground} n={420} color="#5E8E3A" f={f} />
       <Flowers seed={85} ridge={t8.ground} n={260} colors={['#FFFFFF', '#F7D44C', '#F7D44C', '#E03B3B', '#B48FD8']} size={5} />
       {[340, 520, 700].map((x, i) => (
@@ -501,6 +507,7 @@ export const Grandkids = ({f, dur}: SceneProps) => (
       <Butterflies seed={90} n={4} f={f} cx={820} cy={700} rx={420} ry={70} />
     </Par>
     <Motes seed={86} n={30} f={f} />
+    <Bokeh seed={91} n={9} f={f} color="#FFF8DC" opacity={0.13} />
   </Cam>
 );
 
@@ -592,16 +599,16 @@ export const Autumn = ({f, dur}: SceneProps) => {
       <Sun id="t10sun" x={1400} y={sunY} r={60} core="#FFE3A0" glow="#FF9E5A" />
       <Birds seed={108} n={9} f={f} color="#2A1630" y0={170} y1={300} speed={1.2} size={11} />
       <Par f={f} dur={dur} d={14}>
-        <path d={t10.far.d} fill="#6B3B66" />
+        <Land r={t10.far} c="#6B3B66" snow="#E9B9C9" />
         <Mist id="t10m" y={650} h={110} color="#FFB08A" opacity={0.35} f={f} />
       </Par>
       <Par f={f} dur={dur} d={30}>
-        <path d={t10.mid.d} fill="#47284D" />
+        <Land r={t10.mid} c="#47284D" />
         <Forest seed={104} ridge={t10.mid} n={90} h={80} color="#C9792F" />
         <Forest seed={105} ridge={t10.mid} n={40} h={70} color="#E3A33B" sink={0.5} />
       </Par>
       <Par f={f} dur={dur} d={50}>
-        <path d={t10.ground.d} fill="#2B1C30" />
+        <Land r={t10.ground} c="#2B1C30" />
         <Grass seed={109} ridge={t10.ground} n={360} color="#24172A" f={f} />
         <BeeHouse x={470} y={820} s={0.95} seed={7} rows={4} cols={5} wood="#5A3A2A" dark="#2A1A12" roof="#2E1E18" shade={0.4} />
         <Spruce x={1700} y={830} h={300} color="#E3A33B" trunk="#5a3b26" />
@@ -626,6 +633,7 @@ export const Autumn = ({f, dur}: SceneProps) => {
       <rect x={-200} y={-200} width={W + 400} height={H + 400} fill="#1A0F2A" opacity={ramp(f, 180, 300) * 0.35} />
       <Falling seed={106} n={45} f={f} colors={['#E3A33B', '#F2C14E', '#C9792F']} size={9} speed={0.7} />
       <Motes seed={107} n={30} f={f} color="#FFD9A0" />
+      <Bokeh seed={110} n={10} f={f} color="#FFC98A" opacity={0.18} />
     </Cam>
   );
 };
@@ -638,7 +646,7 @@ export const Outro = ({f, dur}: SceneProps) => (
     <Stars seed={11} n={260} opacity={1} f={f} maxY={800} />
     <Glow id="t11g" x={960} y={760} r={700} color="#F2B233" opacity={0.18} />
     <Triglav x={960} y={980} s={1.0} rock="#0B1022" shade="#080C1A" snow="#2C3458" snowShade="#232A49" />
-    <path d={t11.far.d} fill="#070A16" />
+    <Land r={t11.far} c="#070A16" />
     {hexGrid(70).filter((c) => c.y > 760).map((c, i) => (
       <polygon key={i} points={hexPoints(c.x, c.y, 66)} fill="none" stroke="#F2B233" strokeWidth={2} opacity={ramp(f, 40, 120) * 0.25 * (1 - Math.abs(c.x - 960) / 1100) * (0.6 + 0.4 * Math.sin(f / 18 + c.x / 90))} />
     ))}
@@ -652,7 +660,7 @@ export const Outro = ({f, dur}: SceneProps) => (
     })}
     <g opacity={ramp(f, 30, 75)}>
       <text x={960} y={330} textAnchor="middle" fontFamily={SERIF} fontWeight={700} fontSize={150} letterSpacing={lerp(50, 22, ramp(f, 30, 160))} fill="#FFF4E3">
-        MICHAEL
+        MIHA
       </text>
     </g>
     <text x={960} y={405} textAnchor="middle" fontFamily={SANS} fontWeight={600} fontSize={26} letterSpacing={14} fill="#F2C46A" opacity={ramp(f, 60, 95)}>
@@ -704,10 +712,10 @@ export const Planica = ({f, dur}: SceneProps) => {
       <Sky id="tPs" stops={[[0, '#86AFD4'], [0.6, '#D3E3EF'], [1, '#F2F6FA']]} />
       <Clouds seed={134} n={6} f={f} y1={260} color="#F4F7FA" opacity={0.9} />
       <Par f={f} dur={dur} d={14}>
-        <path d={tP.far.d} fill="#DCE6F1" />
+        <Land r={tP.far} c="#DCE6F1" />
       </Par>
       <Par f={f} dur={dur} d={26}>
-        <path d={tP.mid.d} fill="#9FB3C9" />
+        <Land r={tP.mid} c="#9FB3C9" />
         <Forest seed={135} ridge={tP.mid} n={140} h={70} color="#2F4A3E" snow="#F4F7FA" />
       </Par>
       {/* in-run on its steel trestle */}
@@ -763,18 +771,18 @@ export const Daughter = ({f, dur}: SceneProps) => {
       <Clouds seed={144} n={6} f={f} y1={300} />
       <Birds seed={145} n={5} f={f} color="#34445a" />
       <Par f={f} dur={dur} d={14}>
-        <path d={tD.far.d} fill="#A4B9D0" />
+        <Land r={tD.far} c="#A4B9D0" snow="#F4F8FC" />
         <Triglav x={1320} y={570} s={0.5} rock="#93A9C3" shade="#7A92B0" snow="#FFFFFF" snowShade="#DCE6F0" />
       </Par>
       <Par f={f} dur={dur} d={30}>
-        <path d={tD.mid.d} fill="#7FAE5A" />
+        <Land r={tD.mid} c="#7FAE5A" />
         <Forest seed={146} ridge={tD.mid} n={50} h={60} color="#4A7A40" x0={1150} />
         {[150, 1780].map((x, i) => (
           <RoundTree key={x} x={x} y={tD.mid.yAt(x) + 30} h={170} leaf="#5B8A3F" leaf2="#6E9C4A" seed={i + 147} f={f} />
         ))}
       </Par>
       <Par f={f} dur={dur} d={55}>
-        <path d={tD.ground.d} fill="#73A34B" />
+        <Land r={tD.ground} c="#73A34B" />
         <Grass seed={148} ridge={tD.ground} n={420} color="#5F8F3E" f={f} />
         <Flowers seed={149} ridge={tD.ground} n={140} colors={['#FFFFFF', '#F7D44C', '#F28C8C', '#B48FD8']} size={4.5} />
         {Array.from({length: 38}, (_, i) => (
@@ -795,6 +803,7 @@ export const Daughter = ({f, dur}: SceneProps) => {
         <Butterflies seed={150} n={4} f={f} cx={1250} cy={700} rx={300} ry={70} />
       </Par>
       <Motes seed={151} n={25} f={f} />
+      <Bokeh seed={152} n={9} f={f} color="#FFF8DC" opacity={0.13} />
     </Cam>
   );
 };
@@ -979,14 +988,14 @@ export const Anniversary = ({f, dur}: SceneProps) => {
       <Sun id="tAsun" x={260} y={480} r={56} core="#FFE7B0" glow="#FFB878" />
       <Clouds seed={164} n={5} f={f} y1={260} color="#F9D9C0" opacity={0.75} />
       <Par f={f} dur={dur} d={14}>
-        <path d={tA.far.d} fill="#9C8FB0" />
+        <Land r={tA.far} c="#9C8FB0" snow="#F3D2C8" />
       </Par>
       <Par f={f} dur={dur} d={30}>
-        <path d={tA.mid.d} fill="#6F9A55" />
+        <Land r={tA.mid} c="#6F9A55" />
         <Forest seed={165} ridge={tA.mid} n={60} h={60} color="#4D7340" x0={1200} />
       </Par>
       <Par f={f} dur={dur} d={50}>
-        <path d={tA.ground.d} fill="#6E9A48" />
+        <Land r={tA.ground} c="#6E9A48" />
         <Grass seed={166} ridge={tA.ground} n={400} color="#5C8A3C" f={f} />
         <Flowers seed={167} ridge={tA.ground} n={90} colors={['#FFFFFF', '#F7D44C', '#F28C8C']} size={4.5} />
         <House x={1560} y={810} s={1.5} f={f} />
@@ -1015,6 +1024,7 @@ export const Anniversary = ({f, dur}: SceneProps) => {
         <rect x={1025} y={692} width={8} height={16} fill="#2F4A2A" />
       </Par>
       <Motes seed={169} n={30} f={f} color="#FFE3A0" />
+      <Bokeh seed={170} n={12} f={f} color="#FFD27A" opacity={0.2} />
     </Cam>
   );
 };

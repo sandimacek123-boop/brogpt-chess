@@ -1,14 +1,14 @@
 {
-  "name": "michael-beekeeper",
+  "name": "miha-beekeeper",
   "version": "1.0.0",
   "private": true,
-  "description": "Michael — a Slovenian beekeeper's life (1945–2024). Remotion, 2560x1440, 60 fps, 128 s",
+  "description": "Miha — a Slovenian beekeeper's life (1945–2024). Remotion, 2560x1440, 60 fps, 128 s",
   "type": "module",
   "scripts": {
     "music": "python3 scripts/music.py",
     "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts Michael out/Michael_Slovenian_Beekeeper.mp4 --scale=1.3333333333333333 --crf=20 --x264-preset=slow",
-    "still": "remotion still src/index.ts Michael",
+    "render": "remotion render src/index.ts Miha out/Miha_Slovenian_Beekeeper.mp4 --scale=1.3333333333333333 --crf=20 --x264-preset=slow",
+    "still": "remotion still src/index.ts Miha",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

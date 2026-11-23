@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Original soundtrack for "Michael": a gentle Slovenian-style waltz with a
+"""Original soundtrack for "Miha": a gentle Slovenian-style waltz with a
 musette accordion, music box, guitar oom-pah-pah, strings, church bells and a
 hum of bees. Synthesised from scratch with numpy: no samples, nothing downloaded.
 
@@ -181,13 +181,81 @@ for b, bar in enumerate(bars):
 
 for t in (42.0, 43.0, 44.0, 45.0):          # wedding bells
     add(fx_st, bell(67), t, -0.5, 0.22)
-add(fx_st, bell(55, 8.0), 116.0, 0.4, 0.16)  # one distant bell for Michael
+add(fx_st, bell(55, 8.0), 116.0, 0.4, 0.16)  # one distant bell for Miha
 
 for start, end in ((16, 26), (58, 68), (84, 100), (120, 128)):  # bees at the hives
     for base, pan in ((205, -0.6), (238, 0.5), (262, 0.0)):
         sig = buzz(end - start, base)
         sig *= np.clip(np.minimum(np.arange(len(sig)), len(sig) - np.arange(len(sig))) / (1.2 * SR), 0, 1)
         add(fx_st, sig, start, pan, 0.012)
+
+# ---------------------------------------------------------------- sound design
+def band(x, lo, hi):
+    spec = np.fft.rfft(x)
+    fr = np.fft.rfftfreq(len(x), 1 / SR)
+    spec *= 1 / (1 + (lo / np.maximum(fr, 1)) ** 4) / (1 + (fr / hi) ** 4)
+    return np.fft.irfft(spec, n=len(x))
+
+
+def norm(x):
+    return x / (np.abs(x).max() + 1e-9)
+
+
+def fades(sig, sec):
+    k = np.arange(len(sig))
+    return sig * np.clip(np.minimum(k, len(sig) - k) / (sec * SR), 0, 1)
+
+
+def chirp(f0, f1, dur):
+    t = np.arange(int(dur * SR)) / SR
+    f = f0 + (f1 - f0) * (t / dur) ** 0.7 + 250 * np.sin(2 * np.pi * 30 * t)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return (np.sin(ph) + 0.2 * np.sin(2 * ph)) * np.sin(np.pi * t / dur) ** 2
+
+
+def birds(t0, t1, gain):
+    t = t0 + rng.uniform(0.2, 1.0)
+    while t < t1 - 0.6:
+        pan, base = rng.uniform(-0.8, 0.8), rng.uniform(2600, 4600)
+        for k in range(rng.integers(2, 6)):
+            add(fx_st, chirp(base * rng.uniform(0.9, 1.1), base * rng.uniform(0.65, 1.4), rng.uniform(0.05, 0.13)), t + k * rng.uniform(0.09, 0.16), pan, gain * rng.uniform(0.5, 1))
+        t += rng.uniform(0.8, 2.6)
+
+
+def noise_bed(dur, lo, hi, rate):
+    n = int(dur * SR)
+    return norm(band(rng.standard_normal(n), lo, hi) * (0.55 + 0.45 * np.tanh(smooth_noise(n, rate) * 1.5)))
+
+
+def crowd(dur, peak_at, rise=0.6, decay=2.5):
+    """murmur that swells into a cheer at peak_at seconds"""
+    t = np.arange(int(dur * SR)) / SR
+    swell = np.where(t < peak_at, np.clip((t - (peak_at - rise)) / rise, 0, 1), np.exp(-(t - peak_at) / decay))
+    return fades(noise_bed(dur, 300, 2600, 7) * (0.22 + 0.78 * swell), 0.8)
+
+
+def boom():
+    t = np.arange(int(2.4 * SR)) / SR
+    thump = np.sin(2 * np.pi * (50 + 45 * np.exp(-t * 9)) * t) * np.exp(-t * 3.5)
+    rumble = norm(band(rng.standard_normal(len(t)), 50, 700)) * np.exp(-t * 4)
+    sparks = (rng.random(len(t)) < 0.004 * np.exp(-((t - 0.7) / 0.45) ** 2)) * rng.uniform(-1, 1, len(t))
+    return thump + 0.45 * rumble + 0.35 * norm(band(sparks, 1500, 9000))
+
+
+for t0, t1, g in ((8, 16, 0.05), (16, 26, 0.045), (34, 42, 0.04), (42, 50, 0.035), (50, 58, 0.05), (58, 68, 0.04), (84, 92, 0.05), (100, 108, 0.03)):
+    birds(t0, t1, g)  # daytime birdsong
+for t0, t1 in ((26, 34), (108, 118)):  # mountain wind, then the autumn breeze
+    for pan in (-0.5, 0.5):
+        add(fx_st, fades(noise_bed(t1 - t0, 120, 700, 0.4), 1.5), t0, pan, 0.06)
+for pan in (-0.6, 0.6):  # Planica crowd erupts as the jumper lands (30.2 s)
+    add(fx_st, crowd(8, 4.2), 26, pan, 0.07)
+add(fx_st, fades(noise_bed(2.6, 500, 3500, 3) * np.sin(np.linspace(0, np.pi, int(2.6 * SR))) ** 2, 0.1), 27.6, 0.3, 0.05)  # ski whoosh
+for pan in (-0.6, 0.6):  # market chatter
+    add(fx_st, crowd(8, 99), 68, pan, 0.035)
+for pan in (-0.6, 0.6):  # 1991 crowd
+    add(fx_st, crowd(8, 1.0, decay=5), 76, pan, 0.06)
+for t0, bx in zip((20, 55, 85, 120, 150, 175, 205, 230), (640, 1500, 760, 1650, 420, 1000, 560, 1420)):
+    add(fx_st, boom(), (2280 - 24 + t0) / 30, (bx / 960 - 1) * 0.7, 0.22)  # fireworks, synced to the bursts
 
 pad_st = lowpass(pad_st, 1800)
 mix = mel_st * 1.0 + box_st * 0.22 + pah_st * 0.55 + pad_st * 0.05 + fx_st

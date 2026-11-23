@@ -11,7 +11,7 @@ import {Anniversary, Autumn, BeeDay, Bled, Birth, Daughter, Dedek, Freedom, Gran
 // wait for every weight (incl. latin-ext for č š ž) before the first frame is captured
 const fontsReady = delayRender('fonts');
 Promise.all(
-  ['400 40px "Playfair Display"', 'italic 400 40px "Playfair Display"', '700 40px "Playfair Display"', '500 20px Montserrat', '600 20px Montserrat'].map((font) => document.fonts.load(font, 'Michael čšž ŠČŽ')),
+  ['400 40px "Playfair Display"', 'italic 400 40px "Playfair Display"', '700 40px "Playfair Display"', '500 20px Montserrat', '600 20px Montserrat'].map((font) => document.fonts.load(font, 'Miha čšž ŠČŽ')),
 ).then(() => continueRender(fontsReady));
 
 const BORN = 1945;
@@ -22,26 +22,26 @@ type Chapter = {C: (p: SceneProps) => React.ReactElement; start: number; end: nu
 // one bar of the waltz = 2 s = 60 frames, so every chapter starts on a downbeat
 const CHAPTERS: Chapter[] = [
   {C: Title, start: 0, end: 240},
-  {C: Birth, start: 240, end: 480, year: 1945, hex: true, captions: [{text: 'Michael is born in a little village in *Gorenjska*, beneath the three peaks of Triglav.', from: 14, to: 232}]},
+  {C: Birth, start: 240, end: 480, year: 1945, hex: true, captions: [{text: 'Miha is born in a little village in *Gorenjska*, beneath the three peaks of Triglav.', from: 14, to: 232}]},
   {C: Dedek, start: 480, end: 780, year: 1952, captions: [
-    {text: 'His *dedek* keeps bees. At seven, Michael holds his first honeycomb, and he is hooked for life.', from: 10, to: 150},
+    {text: 'His *dedek* keeps bees. At seven, Miha holds his first honeycomb, and he is hooked for life.', from: 10, to: 150},
     {text: 'The *kranjska čebela*: the gentle Carniolan honeybee, born right here in Slovenia.', from: 156, to: 292},
   ]},
   {C: Planica, start: 780, end: 1020, year: 1960, captions: [{text: 'Every March he goes to *Planica* with his father, to watch the ski jumpers fly.', from: 10, to: 232}]},
   {C: Bled, start: 1020, end: 1260, year: 1964, captions: [{text: 'Summers at Lake Bled: rowing a *pletna* to the island, ringing the wishing bell, *kremšnita* with friends.', from: 10, to: 232}]},
   {C: Wedding, start: 1260, end: 1500, year: 1970, captions: [{text: 'He marries Marija in the church on the hill. The bells ring across the whole valley.', from: 10, to: 232}]},
-  {C: Daughter, start: 1500, end: 1740, year: 1973, captions: [{text: 'Their daughter Ana is born. Michael plants a linden tree, a *lipa*, in front of the house for her.', from: 10, to: 232}]},
+  {C: Daughter, start: 1500, end: 1740, year: 1973, captions: [{text: 'Their daughter Ana is born. Miha plants a linden tree, a *lipa*, in front of the house for her.', from: 10, to: 232}]},
   {C: OwnHives, start: 1740, end: 2040, year: 1976, hex: true, captions: [
-    {text: 'Michael builds his own *čebelnjak*: twenty hives, every front painted by hand.', from: 14, to: 150},
+    {text: 'Miha builds his own *čebelnjak*: twenty hives, every front painted by hand.', from: 14, to: 150},
     {text: 'Each summer the jars line up on the bench. The honey tastes like linden, acacia and mountain meadow.', from: 156, to: 292},
   ]},
   {C: Market, start: 2040, end: 2280, year: 1985, captions: [{text: 'On Saturdays he sells honey at the market in Ljubljana. Regulars come back every week for his *med*.', from: 10, to: 232}]},
-  {C: Freedom, start: 2280, end: 2520, year: 1991, captions: [{text: '25 June 1991. Slovenia declares independence. That night Michael opens a jar of his very best honey.', from: 10, to: 232}]},
+  {C: Freedom, start: 2280, end: 2520, year: 1991, captions: [{text: '25 June 1991. Slovenia declares independence. That night Miha opens a jar of his very best honey.', from: 10, to: 232}]},
   {C: Grandkids, start: 2520, end: 2760, year: 2005, captions: [{text: 'Now *he* is the dedek. He teaches his grandkids to move slowly, and to talk softly to the bees.', from: 10, to: 232}]},
-  {C: BeeDay, start: 2760, end: 3000, year: 2018, hex: true, captions: [{text: 'The whole world celebrates the first World Bee Day, because Slovenia asked. Michael has been celebrating it his whole life.', from: 14, to: 232}]},
+  {C: BeeDay, start: 2760, end: 3000, year: 2018, hex: true, captions: [{text: 'The whole world celebrates the first World Bee Day, because Slovenia asked. Miha has been celebrating it his whole life.', from: 14, to: 232}]},
   {C: Anniversary, start: 3000, end: 3240, year: 2020, captions: [{text: 'Fifty years with Marija. The whole family under Ana\'s *lipa*, now taller than the house.', from: 10, to: 232}]},
   {C: Autumn, start: 3240, end: 3540, year: 2024, captions: [
-    {text: 'Autumn 2024. Michael, 79, sits by his hives one last golden evening.', from: 10, to: 160},
+    {text: 'Autumn 2024. Miha, 79, sits by his hives one last golden evening.', from: 10, to: 160},
     {text: 'He leaves forty hives, a valley full of flowers, and grandkids who still talk softly to the bees.', from: 166, to: 296},
   ]},
   {C: Outro, start: 3540, end: 3840, hex: true},
@@ -66,19 +66,33 @@ const HexEdge = ({p}: {p: number}) => (
   </g>
 );
 
-const Rich = ({text}: {text: string}) => (
-  <>
-    {text.split('*').map((part, i) =>
-      i % 2 ? (
-        <em key={i} style={{color: '#FFD27A', fontStyle: 'italic'}}>
-          {part}
-        </em>
-      ) : (
-        <React.Fragment key={i}>{part}</React.Fragment>
-      ),
-    )}
-  </>
-);
+/** Caption text that writes itself on word by word; *x* marks a gold italic Slovenian word. */
+const Rich = ({text, t}: {text: string; t: number}) => {
+  let em = false;
+  let k = 0;
+  return (
+    <>
+      {text.split(/(\s+)/).map((w, j) => {
+        if (!w.trim()) return w;
+        const o = ramp(t, k * 1.7, k * 1.7 + 12);
+        k++;
+        // one span per word (punctuation included) so a comma can never wrap onto its own line
+        return (
+          <span key={j} style={{display: 'inline-block', opacity: o, transform: `translateY(${(1 - o) * 10}px)`}}>
+            {w.split('*').map((part, i) => {
+              if (i > 0) em = !em;
+              return part ? (
+                <span key={i} style={em ? {color: '#FFD27A', fontStyle: 'italic'} : undefined}>
+                  {part}
+                </span>
+              ) : null;
+            })}
+          </span>
+        );
+      })}
+    </>
+  );
+};
 
 const BeeIcon = () => (
   <svg width={34} height={26} viewBox="-20 -14 40 28">
@@ -89,7 +103,7 @@ const BeeIcon = () => (
   </svg>
 );
 
-export const Michael = () => {
+export const Miha = () => {
   const frame = useCurrentFrame() / SUB;
   const active = CHAPTERS.map((c, i) => ({...c, i})).filter((c) => frame >= c.start - T && frame < c.end);
   const current = [...active].reverse()[0];
@@ -101,7 +115,7 @@ export const Michael = () => {
   const blackIn = 1 - ramp(frame, 0, 20);
   const blackOut = ramp(frame, TOTAL - 50, TOTAL - 4);
 
-  const captions = active.flatMap((c) => (c.captions ?? []).map((cap, k) => ({...cap, key: `${c.i}-${k}`, o: window01(frame - c.start, cap.from, cap.to, 16), lift: (1 - ramp(frame - c.start, cap.from, cap.from + 20)) * 14})));
+  const captions = active.flatMap((c) => (c.captions ?? []).map((cap, k) => ({...cap, key: `${c.i}-${k}`, o: window01(frame - c.start, cap.from, cap.to, 16), t: frame - c.start - cap.from})));
   const captionShade = Math.max(0, ...captions.map((c) => c.o));
 
   return (
@@ -144,15 +158,15 @@ export const Michael = () => {
       {captions.map((c) => (
         <div
           key={c.key}
-          style={{position: 'absolute', left: 210, right: 210, bottom: 128, textAlign: 'center', fontFamily: SERIF, fontSize: 46, lineHeight: 1.32, color: '#FFF8EC', opacity: c.o, transform: `translateY(${c.lift}px)`, textShadow: '0 2px 18px rgba(0,0,0,0.55)', textWrap: 'balance'}}
+          style={{position: 'absolute', left: 210, right: 210, bottom: 128, textAlign: 'center', fontFamily: SERIF, fontSize: 46, lineHeight: 1.32, color: '#FFF8EC', opacity: c.o, textShadow: '0 2px 18px rgba(0,0,0,0.55)', textWrap: 'balance'}}
         >
-          <Rich text={c.text} />
+          <Rich text={c.text} t={c.t} />
         </div>
       ))}
 
       <div style={{position: 'absolute', left: 84, top: 64, opacity: hudOn, textShadow: '0 2px 16px rgba(0,0,0,0.45)'}}>
         <div style={{fontFamily: SERIF, fontWeight: 700, fontSize: 84, lineHeight: 1, color: '#FFF6E5', fontVariantNumeric: 'tabular-nums'}}>{year}</div>
-        <div style={{fontFamily: SANS, fontWeight: 600, fontSize: 19, letterSpacing: 6, color: '#FFD27A', marginTop: 12}}>MICHAEL · AGE {age}</div>
+        <div style={{fontFamily: SANS, fontWeight: 600, fontSize: 19, letterSpacing: 6, color: '#FFD27A', marginTop: 12}}>MIHA · AGE {age}</div>
       </div>
 
       <div style={{position: 'absolute', left: 260, right: 260, bottom: 54, height: 30, opacity: hudOn}}>
