@@ -1,8 +1,8 @@
 # Miha: a Slovenian beekeeper's life
 
-A 2-minute illustrated short about Miha (1945–2024). He grew up in a village under Triglav and kept bees until he was 79. It's built with Remotion and exported at 2560×1440, 60 fps, H.264, with an original soundtrack. The scenes are authored at 1920×1080 in 30 fps time and rendered with sub-frames for smooth 60 fps motion.
+A 2-minute illustrated short about Miha (1945–2024). He grew up in a village under Triglav and kept bees until he was 79. It's built with Remotion and exported in 4K (3840×2160) at 60 fps, H.264, with an original soundtrack and sound design. The scenes are authored at 1920×1080 in 30 fps time, then rendered at 2× scale with sub-frames for smooth 60 fps motion.
 
-**Final export:** `out/Miha_Slovenian_Beekeeper.mp4`
+**Final export:** `out/Miha_Slovenian_Beekeeper.mp4`. It's a two-pass encode of the local 4K master, sized to fit under GitHub's 100 MB limit.
 
 ## Chapters
 
@@ -24,11 +24,13 @@ A 2-minute illustrated short about Miha (1945–2024). He grew up in a village u
 | 1:48 | 2024 (79) | His last autumn evening by the hives |
 | 1:58 | | Outro: "čebelar · dedek · Slovenec" |
 
-As the film moves between chapters, the year/age counter ticks forward and so does the life timeline at the bottom. Four of the transitions are honeycomb wipes. To keep the world alive, people blink and cast shadows, clouds and birds drift past, and grass and trees sway. There are also butterflies, swans, pigeons and a walking market crowd.
+As the film moves between chapters, the year/age counter ticks forward and so does the life timeline at the bottom. Four of the transitions are honeycomb wipes. To keep the world alive, people blink and cast shadows, clouds and birds drift past, and grass and trees sway. There are also butterflies, swans, pigeons and a walking market crowd. For polish, the mountains are shaded and snow-capped, out-of-focus bokeh drifts across sunny shots, the camera floats slowly like it's handheld, and captions write on word by word.
 
 ## Soundtrack
 
 `scripts/music.py` synthesises the music from scratch with numpy. No samples are used and nothing is downloaded. It's a gentle waltz in G, 90 BPM in 3/4. One bar is 2 s (64 bars = 128 s), so every chapter starts on a downbeat. Instruments: a musette accordion, a music box, a plucked-guitar oom-pah-pah, strings, wedding bells and a hum of bees at the hives.
+
+The sound design is synthesised the same way, all timed to the picture: birdsong in the daytime scenes, mountain wind, the Planica crowd and a ski whoosh, market chatter, and fireworks booms that match each burst in 1991.
 
 ## Run it
 
@@ -37,7 +39,7 @@ cd miha-beekeeper
 npm install
 npm run music                                 # → public/music.wav (already committed)
 npm run studio                                # live preview
-npm run render                                # → out/Miha_Slovenian_Beekeeper.mp4
+npm run render                                # 4K master → out/Miha_Slovenian_Beekeeper.mp4 (<100 MB)
 node scripts/stills.mjs 800 1800 4360         # QC stills (60 fps frame numbers) → out/stills/
 ```
 
